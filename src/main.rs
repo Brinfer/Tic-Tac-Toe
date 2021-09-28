@@ -1,3 +1,10 @@
+#[path = "./com/client.rs"]
+mod client;
+#[path = "./com/server.rs"]
+mod server;
+
+
 fn main() {
-    println!("Hello, world!");
+    server::main_server();
+    client::main();
 }
