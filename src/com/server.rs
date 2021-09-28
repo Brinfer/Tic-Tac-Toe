@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::{stdin, Read, Write};
 ///Ipv4Addr => use to declare port and ipv4 adress
 /// TcpStream => Read and write network stream
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
@@ -71,3 +71,13 @@ fn client_manager(mut stream: TcpStream, address: &str) {
         }
     }
 }
+
+/* fn get_keypad() -> String {
+    let mut key_entry = String::new();
+
+    stdin()
+        .read_line(&mut key_entry)
+        .expect("Couldn’t read line from stdin");
+        key_entry.to_lowercase();
+    key_entry.replace("\n", "").replace("\r", "")
+} */
