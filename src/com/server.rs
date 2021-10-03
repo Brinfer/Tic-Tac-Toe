@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::{stdin, Read, Write};
 ///Ipv4Addr => use to declare port and ipv4 adress
 /// TcpStream => Read and write network stream
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
@@ -35,6 +35,8 @@ pub fn main_server() {
 
 //stream is 'mut' because the instance keep a track of what data it returns
 fn client_manager(mut stream: TcpStream, address: &str) {
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
     let mut message: Vec<u8> = Vec::new();
     loop {
         //request_buffer store the data that will read
@@ -63,9 +65,20 @@ fn client_manager(mut stream: TcpStream, address: &str) {
                             String::from_utf8(message).unwrap()
                         ); //print address of the sender and convert the buffer to be printable
                            // Writes some prefix of the byte string, not necessarily all of it.
-                        stream
-                            .write(b"ok coucou toi\n")
-                            .expect("Couldn’t write from stdin");
+                        
+                        write!(handle, ">").expect("Could not write handle");
+                        handle.flush().expect("Could not print handle");
+                        match &*get_keypad(){
+                            "exit" =>{
+                                println!("Good bye");
+                                return;
+                            }
+                            line => {
+                                write!(stream, "{}\n", line).expect("Could not write the line into the stream");
+
+                            }
+                        }
+
                         message = Vec::new();
                     } else {
                         //flush => wait (end don't allow the program to go further) till all the bytes are send into the stream
@@ -81,12 +94,12 @@ fn client_manager(mut stream: TcpStream, address: &str) {
     }
 }
 
-/* fn get_keypad() -> String {
+fn get_keypad() -> String {
     let mut key_entry = String::new();
 
     stdin()
         .read_line(&mut key_entry)
         .expect("Couldn’t read line from stdin");
-        key_entry.to_lowercase();
+    key_entry.to_lowercase();
     key_entry.replace("\n", "").replace("\r", "")
-} */
+}
