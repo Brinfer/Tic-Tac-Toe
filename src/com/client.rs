@@ -24,7 +24,8 @@ pub fn main() {
 fn server_exchanges(mut stream: TcpStream) {
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    let buf = &mut [0; 3];
+    let mut message: Vec<u8> = Vec::new();
+    let buf = &mut [0; 1024];
 
     println!("Entre 'exit' to leave\n");
 
@@ -45,13 +46,30 @@ fn server_exchanges(mut stream: TcpStream) {
                             println!("Connection lost with the server");
                             return;
                         }
+
+                        let mut x = 0;
+                        for c in buf.iter_mut() {
+                            if x >= received {
+                                break;
+                            }
+                            x += 1;
+                            if *c == '\n' as u8 {
+                                println!(
+                                    "received message from server : {}",
+                                    String::from_utf8(message).unwrap()
+                                );
+                                message = Vec::new();
+                            } else {
+                                message.push(*c);
+                            }
+                        }
                     }
+
                     Err(_) => {
                         println!("Connection lost with the server");
                         return;
                     }
                 }
-                println!("Reply from the server: {:?}", buf);
             }
         }
     }
@@ -64,6 +82,6 @@ fn get_keypad() -> String {
     stdin()
         .read_line(&mut key_entry)
         .expect("Couldn’t read line from stdin");
-        key_entry.to_lowercase();
+    key_entry.to_lowercase();
     key_entry.replace("\n", "").replace("\r", "")
 }
