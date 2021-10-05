@@ -1,3 +1,5 @@
+//Author : Damien Frissant
+
 ///Ipv4Addr => use to declare port and ipv4 adress
 /// TcpStream => Read and write network stream
 use std::io::{stdin, Read, Write};
@@ -24,11 +26,9 @@ pub fn main() {
 fn server_exchanges(mut stream: TcpStream) {
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
-    let mut message: Vec<u8> = Vec::new();
     let buf = &mut [0; 1024];
-
+    let mut message: Vec<u8> = Vec::new();
     println!("Entre 'exit' to leave\n");
-
     loop {
         write!(handle, "> ").expect("Couldn't write into handle the caractere '>'");
         //Print the following
@@ -46,8 +46,8 @@ fn server_exchanges(mut stream: TcpStream) {
                             println!("Connection lost with the server");
                             return;
                         }
-
                         let mut x = 0;
+                        //TODO Search to convert buf into string in one line without "for"
                         for c in buf.iter_mut() {
                             if x >= received {
                                 break;

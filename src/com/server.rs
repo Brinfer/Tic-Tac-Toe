@@ -1,3 +1,4 @@
+//Author: Damien Frissant
 use std::io::{stdin, Read, Write};
 ///Ipv4Addr => use to declare port and ipv4 adress
 /// TcpStream => Read and write network stream
@@ -8,8 +9,7 @@ pub fn main_server() {
     let ip_addr = Ipv4Addr::new(127, 0, 0, 1);
     let port = 1234;
     //Bind : return a new Tcp instance
-    //unwrap stop the program if there is an issue
-    let listener = TcpListener::bind((ip_addr, port)).unwrap();
+    let listener = TcpListener::bind((ip_addr, port)).expect("Failed to bind");
 
     println!("Waiting for client...");
 
@@ -62,20 +62,19 @@ fn client_manager(mut stream: TcpStream, address: &str) {
                         println!(
                             "Received message from {} : {}",
                             address,
-                            String::from_utf8(message).unwrap()
+                            String::from_utf8(message).expect("Failed to convert bytes to utf8")
                         ); //print address of the sender and convert the buffer to be printable
                            // Writes some prefix of the byte string, not necessarily all of it.
-                        
                         write!(handle, ">").expect("Could not write handle");
                         handle.flush().expect("Could not print handle");
-                        match &*get_keypad(){
-                            "exit" =>{
+                        match &*get_keypad() {
+                            "exit" => {
                                 println!("Good bye");
                                 return;
                             }
                             line => {
-                                write!(stream, "{}\n", line).expect("Could not write the line into the stream");
-
+                                write!(stream, "{}\n", line)
+                                    .expect("Could not write the line into the stream");
                             }
                         }
 
