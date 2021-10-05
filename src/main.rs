@@ -13,6 +13,8 @@ use colored::*;
 use std::io::stdin;
 
 fn main() {
+    state_machine::new();
+
     println!("{}", "Choose your role by entering one of the following role:
                         ----------- Server-----------
                         ----------- Client----------- ".blue().bold());
