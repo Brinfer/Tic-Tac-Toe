@@ -1,41 +1,50 @@
-extern crate colored;
-use colored::*;
-
+use crate::tools;
 use std::io::stdin;
 
-use crate::tools;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//                                              Public
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn role_selection() -> tools::PlayerRole {
-    println!("{}", "Choose your role by entering one of the following role:
-                        ----------- Server-----------
-                        ----------- Client----------- ".blue().bold());
+    println!("Choose your role by entering one of the following role (press \x1B[1mq\x1B[22m to quit):\n\x1B[94m1 : Host\n2 : Guest\x1B[0m");
 
     let mut answer: tools::PlayerRole = tools::PlayerRole::UNKNOWN;
 
-    match &*setup() {
-        "server" => {
-            println!("You are the server");
-            answer = tools::PlayerRole::HOST;
-        }
-        "client" => {
-            println!("You are the client");
-            answer = tools::PlayerRole::CLIENT;
-        }
-        line => {
-            println!("Error {} this is not a type, try again please with 'client or 'server'", line);
+    while answer == tools::PlayerRole::UNKNOWN {
+        match &*read_keyboard() {
+            "1" => {
+                println!("\x1B[32mYou are the host\x1B[0m");
+                answer = tools::PlayerRole::HOST;
+            }
+            "2" => {
+                println!("\x1B[32mYou are the guest\x1B[0m");
+                answer = tools::PlayerRole::GUEST;
+            }
+
+            "q" => {
+                println!("\x1B[32mYou choose to quit the game.\x1B[0m");
+                break;
+            }
+            line => {
+                println!("\x1B[33mError the entered value \x1B[1m{}\x1B[22m is out of the possibility field, please try again.\x1B[0m",line);
+            }
         }
     }
-
     return answer;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//                                              Private
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-fn setup() -> String {
+fn read_keyboard() -> String {
     let mut buf = String::new();
 
-    stdin().read_line(&mut buf).expect("Couldn't read line");
+    stdin().read_line(&mut buf).expect("\x1B[31mCouldn't read line\x1B[0m");
     buf.to_lowercase();
     buf.replace("\n", "").replace("\r", "")
 }

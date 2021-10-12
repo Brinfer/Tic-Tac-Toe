@@ -2,10 +2,8 @@ mod state_machine;
 mod game;
 mod screen;
 mod com;
-
 mod tools;
 
-// mod tooutLesFichiers
 
 fn main() {
     let game_state_machine : state_machine::StateMachine;
