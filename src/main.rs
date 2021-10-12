@@ -3,7 +3,7 @@ mod game;
 mod screen;
 mod com;
 mod tools;
-
+mod common;
 
 fn main() {
     let game_state_machine : state_machine::StateMachine;

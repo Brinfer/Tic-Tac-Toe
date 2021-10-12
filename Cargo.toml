@@ -2,8 +2,7 @@
 name = "morpion"
 version = "0.1.0"
 edition = "2018"
+licence = "MIT License"
+authors = ["Damien FRISSANT", "Pierre-Louis GAUTIER"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-colored = "2"

@@ -1,4 +1,4 @@
-use crate::tools;
+use crate::common;
 use std::io::stdin;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -7,22 +7,21 @@ use std::io::stdin;
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn role_selection() -> tools::PlayerRole {
+pub fn role_selection() -> common::PlayerRole {
     println!("Choose your role by entering one of the following role (press \x1B[1mq\x1B[22m to quit):\n\x1B[94m1 : Host\n2 : Guest\x1B[0m");
 
-    let mut answer: tools::PlayerRole = tools::PlayerRole::UNKNOWN;
+    let mut answer: common::PlayerRole = common::PlayerRole::UNKNOWN;
 
-    while answer == tools::PlayerRole::UNKNOWN {
+    while answer == common::PlayerRole::UNKNOWN {
         match &*read_keyboard() {
             "1" => {
                 println!("\x1B[32mYou are the host\x1B[0m");
-                answer = tools::PlayerRole::HOST;
+                answer = common::PlayerRole::HOST;
             }
             "2" => {
                 println!("\x1B[32mYou are the guest\x1B[0m");
-                answer = tools::PlayerRole::GUEST;
+                answer = common::PlayerRole::GUEST;
             }
-
             "q" => {
                 println!("\x1B[32mYou choose to quit the game.\x1B[0m");
                 break;

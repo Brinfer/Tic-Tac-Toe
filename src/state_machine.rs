@@ -10,11 +10,15 @@
 //!     state_machine::ask_for_select_role(&game_state_machine);
 //!     state_machine::ask_for_connection(&game_state_machine);
 //! ```
+//! # Resources
+//! The state machine has been realized with the help of :
+//! - [Ana Hoverbear](https://hoverbear.org/blog/rust-state-machine-pattern/)
+//! - [synul](https://gist.github.com/synul/d9ba086bf75afb3250fc102da7aab569)
 //!
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{com, error, game, info, screen, tools, warning};
+use crate::{com, error, game, common, info, screen, warning};
 use std::sync::Mutex;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,13 +176,21 @@ pub struct StateMachine {
 enum Event {
     /// Ask to the player to select a role (host or guest), see [ask_for_select_role]
     AskForSelectRole,
+    /// Signal to the state machine that the connection is ready see [signal_connection_established]
     SignalConnectionReady,
+    /// Ask the state machine to establish a connection, see [ask_for_connection]
     AskForConnection,
+    /// Signal to the state machine that the is not finish, see [signal_to_continue_the_game]
     SignalToContinueTheGame,
+    /// Signal to the player that it his turn to play, see [signal_to_play]
     PlayerTurn,
+    /// Signal to the player that it is the opponent turn to play, see [ask_for_wait_opponent]
     OpponentTurn,
+    /// Signal to the state machine that the round is over see [signal_finish_turn]
     TurnFinish,
+    /// Signal to the state machine that the game is over, see [signal_game_finish]
     GameFinish,
+    /// Signal to the state machine that there is a connection error, see [signal_error_connection]
     ErrorConnection,
 }
 
@@ -222,9 +234,6 @@ struct ErrorConnection {}
 struct Game<State> {
     state: State,
 }
-
-// https://hoverbear.org/blog/rust-state-machine-pattern/
-// https://gist.github.com/synul/d9ba086bf75afb3250fc102da7aab569
 
 ////////////////////////////////////////// Transitions ////////////////////////////////////////////////////////////////
 
@@ -324,10 +333,10 @@ fn display_role_selection_screen() {
     let user_role = screen::role_selection();
 
     match user_role {
-        tools::PlayerRole::HOST => {
+        common::PlayerRole::HOST => {
             com::server::main_server();
         }
-        tools::PlayerRole::GUEST => {
+        common::PlayerRole::GUEST => {
             com::client::main();
         }
         _ => {
