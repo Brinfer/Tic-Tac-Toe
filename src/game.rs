@@ -1,5 +1,6 @@
 ///Author: Damien Frissant
 use std::io::stdin;
+
 fn main() {
     start_game();
 }
@@ -14,6 +15,26 @@ fn start_game() {
     }
 
     println!("\x1B[2J\x1B[1;1H");
+
+    /*--------------------------------------------
+    try to make the grid according to the size:
+    Failed with push_str, failed with concat!, failed with format!*/
+    /*let one = "+\n\
+    |\n\
+    +";
+    let two = "---\n\
+    + \n\
+     {} |\n\
+     ---+";
+    let three = format!("{}{}", one, two);
+
+    for i in 0..size {
+        customGrid = format!("{:?}---+", customGrid.chars());
+        println!("{}", customGrid);
+        for i in 0..size {
+        }
+    }
+*/
     //TODO auto generate the grid according to the size
     println!(
         " Grille d'initialisation:\n
