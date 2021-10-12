@@ -7,7 +7,7 @@ use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::thread;
 
 /// Set up the connection to wait for clients
-pub fn main() {
+pub fn main_server() {
     //Choose IP address and port
     let ip_addr = Ipv4Addr::new(127, 0, 0, 1);
     let port = 1234;

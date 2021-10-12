@@ -86,13 +86,13 @@ fn server_exchanges(mut stream: TcpStream) {
     }
 }
 
-///Return a string
+///Return the string entering on the keypad
 fn get_keypad() -> String {
     let mut key_entry = String::new();
-
     stdin()
         .read_line(&mut key_entry)
         .expect("Couldn’t read line from stdin");
+    //To don't care about the letter case, every thing is in lowercase
     key_entry.to_lowercase();
     key_entry.replace("\n", "").replace("\r", "")
 }
