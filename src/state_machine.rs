@@ -1,8 +1,5 @@
 use std::sync::Mutex;
-
-#[path = "../tools.rs"]
-#[macro_use]
-mod tools;
+use crate::{com, game, screen, tools, info};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -13,15 +10,19 @@ mod tools;
 /// Init and create the state machine
 pub fn new() -> StateMachine {
     info!("[Event] Create the state machine");
-    return StateMachine{ currentState : Mutex::new(GameWrapper::new())};
+    return StateMachine {
+        current_state: Mutex::new(GameWrapper::new()),
+    };
 }
+
+// reorganize the project structure
 
 /// Destroy the state machine
 pub fn free(p_state_machine: &StateMachine) {
     info!("[Event] Destroy the state machine");
 
     {
-        let mut state_machine = p_state_machine.currentState.lock().unwrap();
+        let mut state_machine = p_state_machine.current_state.lock().unwrap();
         *state_machine = GameWrapper::free();
     }
 }
@@ -30,7 +31,7 @@ pub fn ask_for_connection(p_state_machine: &StateMachine) {
     info!("[Event] Ask for connection");
 
     {
-        let mut state_changer = p_state_machine.currentState.lock().unwrap();
+        let mut state_changer = p_state_machine.current_state.lock().unwrap();
         *state_changer = (*state_changer).step(Event::AskForConnection);
     }
 }
@@ -39,7 +40,7 @@ pub fn ask_for_select_role(p_state_machine: &StateMachine) {
     info!("[Event] Ask for select role");
 
     {
-        let mut state_changer = p_state_machine.currentState.lock().unwrap();
+        let mut state_changer = p_state_machine.current_state.lock().unwrap();
         *state_changer = (*state_changer).step(Event::AskForSelectRole);
     }
 }
@@ -48,7 +49,7 @@ pub fn signal_connection_established(p_state_machine: &StateMachine) {
     info!("[Event] Signal the connection is ethablished");
 
     {
-        let mut state_changer = p_state_machine.currentState.lock().unwrap();
+        let mut state_changer = p_state_machine.current_state.lock().unwrap();
         *state_changer = (*state_changer).step(Event::SignalConnectionReady);
     }
 }
@@ -57,7 +58,7 @@ pub fn signal_to_continue_the_game(p_state_machine: &StateMachine) {
     info!("[Event] Signal to continue the game");
 
     {
-        let mut state_changer = p_state_machine.currentState.lock().unwrap();
+        let mut state_changer = p_state_machine.current_state.lock().unwrap();
         *state_changer = (*state_changer).step(Event::SignalToContinueTheGame);
     }
 }
@@ -66,7 +67,7 @@ pub fn signal_to_play(p_state_machine: &StateMachine) {
     info!("[Event] Signal at the user to play");
 
     {
-        let mut state_machine = p_state_machine.currentState.lock().unwrap();
+        let mut state_machine = p_state_machine.current_state.lock().unwrap();
         *state_machine = (*state_machine).step(Event::PlayerTurn);
     }
 }
@@ -75,7 +76,7 @@ pub fn ask_for_wait_opponent(p_state_machine: &StateMachine) {
     info!("[Event] Ask to wait the opponent");
 
     {
-        let mut state_machine = p_state_machine.currentState.lock().unwrap();
+        let mut state_machine = p_state_machine.current_state.lock().unwrap();
         *state_machine = (*state_machine).step(Event::OpponentTurn);
     }
 }
@@ -84,7 +85,7 @@ pub fn signal_finish_turn(p_state_machine: &StateMachine) {
     info!("[Event] Signal the end of the turn");
 
     {
-        let mut state_machine = p_state_machine.currentState.lock().unwrap();
+        let mut state_machine = p_state_machine.current_state.lock().unwrap();
         *state_machine = (*state_machine).step(Event::TurnFinish);
     }
 }
@@ -93,7 +94,7 @@ pub fn signal_game_finish(p_state_machine: &StateMachine) {
     info!("[Event] Signal the end of the game");
 
     {
-        let mut state_machine = p_state_machine.currentState.lock().unwrap();
+        let mut state_machine = p_state_machine.current_state.lock().unwrap();
         *state_machine = (*state_machine).step(Event::GameFinish);
     }
 }
@@ -102,13 +103,13 @@ pub fn signal_error_connection(p_state_machine: &StateMachine) {
     info!("[Event] A connection error occur");
 
     {
-        let mut state_machine = p_state_machine.currentState.lock().unwrap();
+        let mut state_machine = p_state_machine.current_state.lock().unwrap();
         *state_machine = (*state_machine).step(Event::ErrorConnection);
     }
 }
 
 pub struct StateMachine {
-    currentState: Mutex<GameWrapper>,
+    current_state: Mutex<GameWrapper>,
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -267,14 +268,29 @@ impl From<&mut Game<WaitingForOpponent>> for Game<ChoiceForGameStatus> {
 
 fn display_role_selection_screen() {
     info!("[Action] Display the selection screen");
-}
 
-fn display_connection_screen() {
-    info!("[Action] Display the connection screen");
+    let user_role = screen::role_selection();
+
+    match user_role {
+        tools::PlayerRole::HOST => {
+            com::server::main_server();
+        }
+        tools::PlayerRole::CLIENT => {
+            com::client::main();
+        }
+        _ => {
+            panic!("Unknown role");
+        }
+    }
 }
 
 fn start_game() {
     info!("[Action] Start the game");
+    // game::init_game();
+}
+
+fn display_connection_screen() {
+    info!("[Action] Display the connection screen");
 }
 
 fn is_my_turn() {

@@ -1,22 +1,20 @@
 ///Author: Damien Frissant
-
 use std::io::stdin;
 fn main() {
     start_game();
-    
 }
 
-fn start_game(){
+fn start_game() {
     let size = 3 * 3;
     let mut numbers: Vec<String> = Vec::new();
-    
-    for i in 1..(size+1){
+
+    for i in 1..(size + 1) {
         numbers.push(i.to_string());
         println!("{:?}", numbers);
     }
 
     println!("\x1B[2J\x1B[1;1H");
-//TODO auto generate the grid according to the size
+    //TODO auto generate the grid according to the size
     println!(
         " Grille d'initialisation:\n
 +---+---+---+
@@ -42,7 +40,7 @@ fn start_game(){
     let mut player: bool = true;
     while i < size {
         let line = &*get_keypad();
-        //Look into numbers and return a bool if the variable 'line' is in 
+        //Look into numbers and return a bool if the variable 'line' is in
         let present = numbers.iter().any(|x| x == line);
         //println!("Est present ? {}", present);
 
