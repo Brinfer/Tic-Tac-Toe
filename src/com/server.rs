@@ -1,11 +1,14 @@
 //Author: Damien Frissant
+//Many functions are identical from "client.rs" and "server.rs". please, see "client.rs" most questions
 use std::io::{stdin, Read, Write};
 ///Ipv4Addr => use to declare port and ipv4 adress
 /// TcpStream => Read and write network stream
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
 use std::thread;
 
+/// Set up the connection to wait for clients
 pub fn main_server() {
+    //Choose IP address and port
     let ip_addr = Ipv4Addr::new(127, 0, 0, 1);
     let port = 1234;
     //Bind : return a new Tcp instance
@@ -13,10 +16,11 @@ pub fn main_server() {
 
     println!("Waiting for client...");
 
-    //Using for to manage each connection
+    //Used to manage each connection
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                //peer_addr return the remote address
                 let address = match stream.peer_addr() {
                     Ok(addr) => format!("Host Address is [{}]", addr),
                     Err(_) => "unknown".to_owned(),
@@ -35,8 +39,10 @@ pub fn main_server() {
 
 //stream is 'mut' because the instance keep a track of what data it returns
 fn client_manager(mut stream: TcpStream, address: &str) {
+    //Add fix symbole to the terminal
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
+
     let mut message: Vec<u8> = Vec::new();
     loop {
         //request_buffer store the data that will read
@@ -93,12 +99,13 @@ fn client_manager(mut stream: TcpStream, address: &str) {
     }
 }
 
+///Get the keypad entries
 fn get_keypad() -> String {
     let mut key_entry = String::new();
-
     stdin()
         .read_line(&mut key_entry)
         .expect("Couldn’t read line from stdin");
+    //don't care about the letter case, every thing is in lowercase
     key_entry.to_lowercase();
     key_entry.replace("\n", "").replace("\r", "")
 }

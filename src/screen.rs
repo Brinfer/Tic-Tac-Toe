@@ -70,6 +70,7 @@ fn read_keyboard() -> String {
     stdin()
         .read_line(&mut buf)
         .expect("\x1B[31mCouldn't read line\x1B[0m");
+    //To don't care about the letter case, every thing is in lowercase
     buf.to_lowercase();
     buf.replace("\n", "").replace("\r", "")
 }
