@@ -6,3 +6,6 @@ licence = "MIT License"
 authors = ["Damien FRISSANT", "Pierre-Louis GAUTIER"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+posixmq = "1.0.0"

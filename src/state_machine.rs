@@ -18,8 +18,11 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{com, error, game, common, info, screen, warning};
+use crate::{common, error, game, info, screen, warning};
+use posixmq::PosixMq;
+use std::mem::size_of;
 use std::sync::Mutex;
+use std::thread;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -82,6 +85,7 @@ pub fn signal_connection_established(p_state_machine: &StateMachine) {
             Ok(new_state) => *state_changer = new_state,
             Err(()) => (),
         }
+        screen::write_in_grid(&p_state_machine.grid.lock().unwrap())
     }
 }
 
@@ -175,6 +179,7 @@ pub struct StateMachine {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The different events that can affect the state machine
+#[derive(Debug)]
 enum Event {
     /// Ask to the player to select a role (host or guest), see [ask_for_select_role]
     AskForSelectRole,
@@ -206,6 +211,11 @@ enum GameWrapper {
     Playing(Game<Playing>),
     WaitingForOpponent(Game<WaitingForOpponent>),
     ErrorConnection(Game<ErrorConnection>),
+}
+
+#[derive(Debug)]
+struct MqMsg {
+    event: Event,
 }
 
 #[derive(Debug)]
@@ -336,10 +346,10 @@ fn display_role_selection_screen() {
 
     match user_role {
         common::PlayerRole::HOST => {
-            com::server::main_server();
+            // com::server::main_server();
         }
         common::PlayerRole::GUEST => {
-            com::client::main();
+            // com::client::main();
         }
         _ => {
             warning!("Unknown role");
@@ -437,4 +447,17 @@ impl GameWrapper {
             }
         }
     }
+}
+
+fn set_up_mq(p_mq_name: &str) -> PosixMq {
+    return posixmq::OpenOptions::readwrite()
+        .create()
+        .max_msg_len(size_of::<[MqMsg; 1]>())
+        .capacity(10)
+        .open(p_mq_name)
+        .expect("[StateMachine] Error when opening the mqueue");
+}
+
+fn tear_down_mq(p_mq_name: &str) {
+    posixmq::remove_queue(p_mq_name).unwrap();
 }

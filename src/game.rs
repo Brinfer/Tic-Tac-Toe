@@ -4,8 +4,6 @@
 //! Pierre-Louis GAUTIER
 //! Damien FRISSANT
 
-use std::io::stdin;
-
 const OPPONENT_SYMBOL: &str = "O";
 const PLAYER_SYMBOL: &str = "X";
 
