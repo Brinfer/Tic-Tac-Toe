@@ -6,9 +6,8 @@ mod tools;
 mod common;
 
 fn main() {
-    let game_state_machine : state_machine::StateMachine;
+    let game_state_machine = state_machine::StateMachine::create_and_start();
 
-    game_state_machine = state_machine::new();
 
     state_machine::ask_for_select_role(&game_state_machine);
     state_machine::ask_for_connection(&game_state_machine);
@@ -21,4 +20,6 @@ fn main() {
     state_machine::ask_for_wait_opponent(&game_state_machine);
     state_machine::signal_finish_turn(&game_state_machine);
     state_machine::signal_game_finish(&game_state_machine);
+
+    game_state_machine.stop_and_destroy();
 }

@@ -19,25 +19,16 @@
 //! Pierre-Louis GAUTIER
 
 use crate::{common, error, game, info, screen, warning};
-use posixmq::PosixMq;
-use std::mem::size_of;
 use std::sync::Mutex;
 use std::thread;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Public
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/// Init the state machine
-pub fn new() -> StateMachine {
-    info!("[StateMachine] Event : Create the state machine");
-    return StateMachine {
-        current_state: Mutex::new(GameWrapper::new()),
-        grid: game::init_grid()
-    };
-}
 
 /// Destroy the given `p_state_machine`
 pub fn free(p_state_machine: &StateMachine) {
@@ -169,7 +160,37 @@ pub fn signal_error_connection(p_state_machine: &StateMachine) {
 
 pub struct StateMachine {
     current_state: Mutex<GameWrapper>,
-    grid : Vec<Vec<String>>,
+    grid: Mutex<Vec<Vec<String>>>,
+    sender: Sender<MqMsg>,
+    handler: thread::JoinHandle<()>
+}
+
+impl StateMachine {
+    pub fn create_and_start() -> Self {
+        info!("[StateMachine] Event : Create the state machine");
+
+        let l_current_state = Mutex::new(GameWrapper::new());
+        let l_grid = Mutex::new(game::init_grid());
+        let (l_sender, l_receiver): (Sender<MqMsg>, Receiver<MqMsg>) = mpsc::channel();
+
+        Self {
+            current_state: Mutex::new(GameWrapper::new()),
+            grid: Mutex::new(game::init_grid()),
+            sender: l_sender,
+            handler: thread::spawn(move || {
+                run(&l_receiver);
+            }),
+        }
+    }
+
+    pub fn stop_and_destroy(self) {
+        info!("[StateMachine] Event : Stop the state machine");
+
+        // TODO send stop signal
+        self.handler.join().expect("[StateMachine] Error when joining the thread");
+
+        // TODO Destroy
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -449,15 +470,15 @@ impl GameWrapper {
     }
 }
 
-fn set_up_mq(p_mq_name: &str) -> PosixMq {
-    return posixmq::OpenOptions::readwrite()
-        .create()
-        .max_msg_len(size_of::<[MqMsg; 1]>())
-        .capacity(10)
-        .open(p_mq_name)
-        .expect("[StateMachine] Error when opening the mqueue");
-}
+fn run(p_recv: &Receiver<MqMsg>) {
+    info!("[StateMachine] Start the state machine");
 
-fn tear_down_mq(p_mq_name: &str) {
-    posixmq::remove_queue(p_mq_name).unwrap();
+    loop{
+        let l_msg: MqMsg = p_recv.recv().expect("[StateMachine] Error when receiving the message in the channel");
+
+        // TODO trait the msg
+
+        // Use only enum ? (for the state)
+        // What data to share ?
+    }
 }
