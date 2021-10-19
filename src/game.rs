@@ -1,152 +1,123 @@
-///Author: Damien Frissant
+//! Module allowing all the management of the tic-tac-toe grid.
+//!
+//! # Author
+//! Pierre-Louis GAUTIER
+//! Damien FRISSANT
+
 use std::io::stdin;
 
-fn main() {
-    start_game();
-}
+const OPPONENT_SYMBOL: &str = "O";
+const PLAYER_SYMBOL: &str = "X";
 
-fn start_game() {
-    let size = 3 * 3;
-    let mut numbers: Vec<String> = Vec::new();
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//                                              Public
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    for i in 1..(size + 1) {
-        numbers.push(i.to_string());
-        println!("{:?}", numbers);
-    }
+pub fn init_grid() -> Vec<Vec<String>> {
+    let mut l_grid = vec![vec![0.to_string(); 4]; 4];
 
-    println!("\x1B[2J\x1B[1;1H");
-
-    /*--------------------------------------------
-    try to make the grid according to the size:
-    Failed with push_str, failed with concat!, failed with format!*/
-    /*let one = "+\n\
-    |\n\
-    +";
-    let two = "---\n\
-    + \n\
-     {} |\n\
-     ---+";
-    let three = format!("{}{}", one, two);
-
-    for i in 0..size {
-        customGrid = format!("{:?}---+", customGrid.chars());
-        println!("{}", customGrid);
-        for i in 0..size {
+    for i in 0..l_grid.len() {
+        for j in 0..l_grid[i].len() {
+            l_grid[i][j] = ((4 * i) + j).to_string();
         }
     }
-*/
-    //TODO auto generate the grid according to the size
-    println!(
-        " Grille d'initialisation:\n
-+---+---+---+
-| {} | {} | {} |
-+---+---+---+
-| {} | {} | {} |
-+---+---+---+
-| {} | {} | {} |
-+---+---+---+
-\nEntrer le nombre où vous souhaitez placer votre symbole\n",
-        numbers[0],
-        numbers[1],
-        numbers[2],
-        numbers[3],
-        numbers[4],
-        numbers[5],
-        numbers[6],
-        numbers[7],
-        numbers[8]
-    );
+    return l_grid;
+}
 
-    let mut i = 0;
-    let mut player: bool = true;
-    while i < size {
-        let line = &*get_keypad();
-        //Look into numbers and return a bool if the variable 'line' is in
-        let present = numbers.iter().any(|x| x == line);
-        //println!("Est present ? {}", present);
+pub fn change_cell(p_grid: &Vec<Vec<String>>, p_cell: u8, p_symbol: String) {
+    // It's ok
+    println!("Row {}", (p_cell as usize) / p_grid.len());
+    println!("Column {}", (p_cell as usize) % p_grid.len());
 
-        if present {
-            let index = numbers.iter().position(|r| r == line).unwrap();
-            //println!("Le {:?} se trouve en {:?} position", line, index);
+    // let flattened = p_grid.clone().into_iter().flatten().collect::<Vec<String>>();
 
-            if player {
-                numbers[index] = "X".to_string();
-                player = false;
-            } else {
-                numbers[index] = "O".to_string();
-                player = true;
+    // println!("{:?}", flattened);
+
+    // if flattened[p_cell] == OPPONENT_SYMBOL || flattened[p_cell] == PLAYER_SYMBOL {
+    //     println!("Cell already taken");
+    // } else {
+
+    // }
+
+    // let l_contain = &p_grid[p_grid.len() % (p_cell as usize)][p_grid.len() % (p_cell as usize) - p_grid.len()];
+
+    // match l_contain.as_str() {
+    //     OPPONENT_SYMBOL | PLAYER_SYMBOL => {
+    //         println!("Already taken");
+    //     }
+    //     _ => {
+    //         println!("OK");
+    //     }
+    // }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//                                              Private
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+fn test_winner(p_grid: &Vec<Vec<String>>) {
+    let mut l_counter: i8 = 0;
+
+    // Test in the row
+    for i in 0..p_grid.len() {
+        for j in 0..p_grid[i].len() {
+            if p_grid[i][j] == OPPONENT_SYMBOL {
+                l_counter -= 1;
+            } else if p_grid[i][j] == PLAYER_SYMBOL {
+                l_counter += 1;
             }
-            println!("\x1B[2J\x1B[1;1H");
-            print_new_grid(&numbers);
-            if check_win(&numbers) {
-                println!("You win !");
-                return;
-            }
-            i += 1;
-        } else {
-            println!("This cell is already used, please choose another one");
         }
     }
-}
 
-fn get_keypad() -> String {
-    let mut key_entry = String::new();
+    if (l_counter >= 3) || (l_counter <= -3) {
+        println!("There is a winner");
+    }
 
-    stdin()
-        .read_line(&mut key_entry)
-        .expect("Couldn’t read line from stdin");
-    key_entry.to_lowercase();
-    key_entry.replace("\n", "").replace("\r", "")
-}
+    // Test in the column
+    for i in 0..p_grid.len() {
+        l_counter = 0;
+        for j in 0..p_grid[i].len() {
+            if p_grid[i][j] == OPPONENT_SYMBOL {
+                l_counter -= 1;
+            } else if p_grid[i][j] == PLAYER_SYMBOL {
+                l_counter += 1;
+            }
+        }
+        if (l_counter >= 3) || (l_counter <= -3) {
+            println!("There is a winner");
+        }
+    }
 
-fn print_new_grid(numbers: &Vec<String>) {
-    println!(
-        "
-+---+---+---+
-| {} | {} | {} |
-+---+---+---+
-| {} | {} | {} |
-+---+---+---+
-| {} | {} | {} |
-+---+---+---+
-",
-        numbers[0],
-        numbers[1],
-        numbers[2],
-        numbers[3],
-        numbers[4],
-        numbers[5],
-        numbers[6],
-        numbers[7],
-        numbers[8]
-    );
-}
+    l_counter = 0;
 
-fn check_win(numbers: &Vec<String>) -> bool {
-    //Line win possibilities
-    (numbers[0] == numbers[1] && numbers[1] == numbers[2] &&  numbers[2] == "X") ||
-    (numbers[0] == numbers[1] && numbers[1] == numbers[2] &&  numbers[2] == "O") ||
+    // Check Left-to-Right downward Diagonal:
+    for i in 0..p_grid.len() {
+        if p_grid[i][i] == OPPONENT_SYMBOL {
+            l_counter -= 1;
+        } else if p_grid[i][i] == PLAYER_SYMBOL {
+            l_counter += 1;
+        }
+    }
 
-    (numbers[3] == numbers[4] && numbers[4] == numbers[5] &&  numbers[5] == "X") ||
-    (numbers[3] == numbers[4] && numbers[4] == numbers[5] &&  numbers[5] == "O") ||
+    if (l_counter >= 3) || (l_counter <= -3) {
+        println!("There is a winner");
+    }
 
-    (numbers[6] == numbers[7] && numbers[7] == numbers[8] &&  numbers[8] == "X") ||
-    (numbers[6] == numbers[7] && numbers[7] == numbers[8] &&  numbers[8] == "O") ||
+    // Check Left-to-Right upward Diagonal
+    l_counter = 0;
+    for i in 0..p_grid.len() {
+        if p_grid[i][(p_grid[i].len() - 1) - i] == OPPONENT_SYMBOL {
+            l_counter -= 1;
+        } else if p_grid[i][(p_grid[i].len() - 1) - i] == PLAYER_SYMBOL {
+            l_counter += 1;
+        }
+    }
 
-    //Row win possibilities
-    (numbers[0] == numbers[3] && numbers[3] == numbers[6] &&  numbers[6] == "X") ||
-    (numbers[0] == numbers[3] && numbers[3] == numbers[6] &&  numbers[6] == "O") ||
-
-    (numbers[4] == numbers[1] && numbers[7] == numbers[1] &&  numbers[7] == "X") ||
-    (numbers[4] == numbers[1] && numbers[7] == numbers[1] &&  numbers[7] == "O") ||
-
-    (numbers[2] == numbers[5] && numbers[5] == numbers[8] &&  numbers[8] == "X") ||
-    (numbers[2] == numbers[5] && numbers[5] == numbers[8] &&  numbers[8] == "O") ||
-
-    //Diagoanal win possibilities
-    (numbers[0] == numbers[4] && numbers[8] == numbers[4] &&  numbers[0] == "X") ||
-    (numbers[0] == numbers[4] && numbers[8] == numbers[4] &&  numbers[0] == "O") ||
-
-    (numbers[2] == numbers[4] && numbers[4] == numbers[6] &&  numbers[6] == "X") ||
-    (numbers[2] == numbers[4] && numbers[4] == numbers[6] &&  numbers[6] == "O")
+    if (l_counter >= 3) || (l_counter <= -3) {
+        println!("There is a winner");
+    }
 }

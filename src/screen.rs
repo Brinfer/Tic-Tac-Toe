@@ -1,4 +1,5 @@
 use crate::common;
+use crate::game;
 use std::io::stdin;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -34,6 +35,29 @@ pub fn role_selection() -> common::PlayerRole {
     return answer;
 }
 
+pub fn display_grid(p_grid: &Vec<Vec<String>>) {
+    println!("{}+", "+-----".repeat(p_grid.len()));
+    for i in 0..p_grid.len() {
+        print!("|");
+        for j in 0..p_grid[i].len() {
+            print!("{:^5}|", p_grid[i][j]);
+        }
+        println!("\n{}+", "+-----".repeat(p_grid[i].len()));
+    }
+}
+
+pub fn write_in_grid(p_grid: &Vec<Vec<String>>) {
+    display_grid(p_grid);
+
+    // TODO Protect against bad enter
+
+    loop {
+        println!("Enter the number of the box you wish to fill in");
+        let l_number: u8 = read_keyboard().parse().unwrap();
+        game::change_cell(p_grid, l_number, "X".to_string());
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Private
@@ -43,7 +67,9 @@ pub fn role_selection() -> common::PlayerRole {
 fn read_keyboard() -> String {
     let mut buf = String::new();
 
-    stdin().read_line(&mut buf).expect("\x1B[31mCouldn't read line\x1B[0m");
+    stdin()
+        .read_line(&mut buf)
+        .expect("\x1B[31mCouldn't read line\x1B[0m");
     buf.to_lowercase();
     buf.replace("\n", "").replace("\r", "")
 }

@@ -32,6 +32,7 @@ pub fn new() -> StateMachine {
     info!("[StateMachine] Event : Create the state machine");
     return StateMachine {
         current_state: Mutex::new(GameWrapper::new()),
+        grid: game::init_grid()
     };
 }
 
@@ -164,6 +165,7 @@ pub fn signal_error_connection(p_state_machine: &StateMachine) {
 
 pub struct StateMachine {
     current_state: Mutex<GameWrapper>,
+    grid : Vec<Vec<String>>,
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
