@@ -13,21 +13,48 @@ const PLAYER_SYMBOL: &str = "X";
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn init_grid() -> Vec<Vec<String>> {
-    let mut l_grid = vec![vec![0.to_string(); 4]; 4];
-
-    for i in 0..l_grid.len() {
-        for j in 0..l_grid[i].len() {
-            l_grid[i][j] = ((4 * i) + j).to_string();
-        }
-    }
-    return l_grid;
+pub struct Grid {
+    grid: Vec<Vec<String>>,
 }
 
-pub fn change_cell(p_grid: &Vec<Vec<String>>, p_cell: u8, p_symbol: String) {
-    // It's ok
-    println!("Row {}", (p_cell as usize) / p_grid.len());
-    println!("Column {}", (p_cell as usize) % p_grid.len());
+impl Grid {
+    pub fn new() -> Self {
+        let mut l_grid = vec![vec![0.to_string(); 4]; 4];
+
+        for i in 0..l_grid.len() {
+            for j in 0..l_grid[i].len() {
+                l_grid[i][j] = ((4 * i) + j).to_string();
+            }
+        }
+
+        Grid { grid: l_grid }
+    }
+
+    pub fn len(&self) -> usize {
+        self.grid[0].len()
+    }
+
+    pub fn get_column(&self, p_x: usize) -> Vec<String> {
+        self.grid[p_x].clone()
+    }
+
+    pub fn get_cell(&self, p_x: usize, p_y: usize) -> String {
+        self.grid[p_x][p_y].to_string()
+    }
+
+    pub fn set_cell(&mut self, p_x: usize, p_y: usize, p_value: &String) {
+        self.grid[p_x][p_y] = p_value.to_string();
+    }
+}
+
+pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) {
+    let p_x: usize = (p_cell as usize) / p_grid.len();
+    let p_y: usize = (p_cell as usize) % p_grid.len();
+
+    println!("Row {}", p_x);
+    println!("Column {}", p_y);
+
+    p_grid.set_cell(p_x, p_y, p_value);
 
     // let flattened = p_grid.clone().into_iter().flatten().collect::<Vec<String>>();
 
@@ -104,6 +131,7 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     if (l_counter >= 3) || (l_counter <= -3) {
         println!("There is a winner");
     }
+    // TODO Rationalize
 
     // Check Left-to-Right upward Diagonal
     l_counter = 0;

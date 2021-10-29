@@ -19,7 +19,6 @@
 //! Pierre-Louis GAUTIER
 
 use crate::{common, error, game, info, screen, warning};
-use std::sync::Mutex;
 use std::thread;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
@@ -125,13 +124,12 @@ impl StateMachine {
     pub fn create_and_start() -> Self {
         info!("[StateMachine] Event : Create the state machine");
 
-        let l_grid = Mutex::new(game::init_grid());
         let (l_sender, l_receiver): (Sender<MqMsg>, Receiver<MqMsg>) = mpsc::channel();
 
         Self {
             sender: l_sender,
             handler: thread::spawn(move || {
-                run(&l_receiver, &l_grid);
+                run(&l_receiver);
             }),
         }
     }
@@ -228,7 +226,7 @@ struct Game<State> {
 
 impl From<&mut Game<Init>> for Game<SelectRole> {
     fn from(_previous_state: &mut Game<Init>) -> Game<SelectRole> {
-        display_role_selection_screen();
+        // display_role_selection_screen();
         Game {
             state: SelectRole {},
         }
@@ -246,7 +244,6 @@ impl From<&mut Game<SelectRole>> for Game<WaitingForConnection> {
 
 impl From<&mut Game<ChoiceForGameStatus>> for Game<ChoiceForPlayer> {
     fn from(_previous_state: &mut Game<ChoiceForGameStatus>) -> Game<ChoiceForPlayer> {
-        action_is_my_turn();
         Game {
             state: ChoiceForPlayer {},
         }
@@ -298,7 +295,6 @@ impl From<&mut Game<ChoiceForPlayer>> for Game<WaitingForOpponent> {
 
 impl From<&mut Game<Playing>> for Game<ChoiceForGameStatus> {
     fn from(_previous_state: &mut Game<Playing>) -> Game<ChoiceForGameStatus> {
-        action_next_turn();
         Game {
             state: ChoiceForGameStatus {},
         }
@@ -307,7 +303,6 @@ impl From<&mut Game<Playing>> for Game<ChoiceForGameStatus> {
 
 impl From<&mut Game<WaitingForOpponent>> for Game<ChoiceForGameStatus> {
     fn from(_previous_state: &mut Game<WaitingForOpponent>) -> Game<ChoiceForGameStatus> {
-        action_next_turn();
         Game {
             state: ChoiceForGameStatus {},
         }
@@ -344,12 +339,16 @@ fn action_display_connection_screen() {
     info!("[StateMachine] Action : Display the connection screen");
 }
 
-fn action_is_my_turn() {
+fn action_is_my_turn(p_grid: &mut game::Grid) {
     info!("[StateMachine] Action : Test if it's my turn");
+
+    screen::write_in_grid(p_grid, &String::from("X"));
 }
 
-fn action_next_turn() {
+fn action_next_turn(p_grid: &game::Grid) {
     info!("[StateMachine] Action : Pass to the next turn");
+
+    screen::display_grid(p_grid);
 }
 
 fn action_exit_game() {
@@ -385,7 +384,7 @@ impl GameWrapper {
         GameWrapper::None
     }
 
-    pub fn step(&mut self, event: &Event) -> Result<Self, ()> {
+    pub fn step(&mut self, event: &Event, p_grid: &mut game::Grid) -> Result<Self, ()> {
         match (self, event) {
             (GameWrapper::Init(previous_state), Event::AskForSelectRole) => {
                 Ok(GameWrapper::SelectRole(previous_state.into()))
@@ -397,12 +396,14 @@ impl GameWrapper {
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (GameWrapper::ChoiceForGameStatus(previous_state), Event::SignalToContinueTheGame) => {
+                action_is_my_turn(p_grid);
                 Ok(GameWrapper::ChoiceForPlayer(previous_state.into()))
             }
             (GameWrapper::ChoiceForGameStatus(previous_state), Event::GameFinish) => {
                 Ok(GameWrapper::WaitingForConnection(previous_state.into()))
             }
             (GameWrapper::ChoiceForPlayer(previous_state), Event::PlayerTurn) => {
+                action_next_turn(&p_grid);
                 Ok(GameWrapper::Playing(previous_state.into()))
             }
             (GameWrapper::ChoiceForPlayer(previous_state), Event::OpponentTurn) => {
@@ -412,6 +413,7 @@ impl GameWrapper {
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (GameWrapper::WaitingForOpponent(previous_state), Event::TurnFinish) => {
+                action_next_turn(&p_grid);
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (_, Event::ErrorConnection) => {
@@ -426,16 +428,16 @@ impl GameWrapper {
     }
 }
 
-fn run(p_recv: &Receiver<MqMsg>, p_grid: &Mutex<Vec<Vec<String>>>) {
+fn run(p_recv: &Receiver<MqMsg>) {
     info!("[StateMachine] Start the state machine");
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
-
+    let mut l_grid: game::Grid = game::Grid::new();
     loop{
         let l_msg: MqMsg = p_recv.recv().expect("[StateMachine] Error when receiving the message in the channel");
 
         match l_msg.event {
-            _ => l_current_state.step(&l_msg.event),
+            _ => l_current_state = l_current_state.step(&l_msg.event, &mut l_grid).unwrap(),
             Event::Stop => break,
         };
 
