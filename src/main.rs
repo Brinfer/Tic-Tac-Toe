@@ -8,6 +8,9 @@ mod common;
 fn main() {
     let game_state_machine = state_machine::StateMachine::create_and_start();
 
+    let game = state_machine::StateMachine::create_and_start();
+
+    game.stop_and_destroy();
 
     state_machine::ask_for_select_role(&game_state_machine);
     state_machine::ask_for_connection(&game_state_machine);

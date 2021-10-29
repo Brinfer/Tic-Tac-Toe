@@ -156,6 +156,7 @@ impl StateMachine {
 
 /// The different events that can affect the state machine
 #[derive(Debug)]
+#[derive(PartialEq)]
 enum Event {
     /// Ask to the player to select a role (host or guest), see [ask_for_select_role]
     AskForSelectRole,
@@ -431,13 +432,12 @@ fn run(p_recv: &Receiver<MqMsg>, p_grid: &Mutex<Vec<Vec<String>>>) {
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
 
-    loop{
-        let l_msg: MqMsg = p_recv.recv().expect("[StateMachine] Error when receiving the message in the channel");
-
-        match l_msg.event {
-            _ => l_current_state.step(&l_msg.event),
-            Event::Stop => break,
-        };
+    let l_msg: MqMsg = p_recv.recv().expect("[StateMachine] Error when receiving the message in the channel");
+        while l_msg.event != Event::Stop{
+            match l_msg.event {
+                Event::Stop => break,
+                _ => l_current_state.step(&l_msg.event),
+            };
 
 
         // TODO trait the msg
