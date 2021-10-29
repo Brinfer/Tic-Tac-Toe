@@ -154,6 +154,7 @@ impl StateMachine {
 
 /// The different events that can affect the state machine
 #[derive(Debug)]
+#[derive(PartialEq)]
 enum Event {
     /// Ask to the player to select a role (host or guest), see [ask_for_select_role]
     AskForSelectRole,
@@ -440,7 +441,6 @@ fn run(p_recv: &Receiver<MqMsg>) {
             _ => l_current_state = l_current_state.step(&l_msg.event, &mut l_grid).unwrap(),
             Event::Stop => break,
         };
-
 
         // TODO trait the msg
 
