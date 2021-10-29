@@ -33,134 +33,90 @@ use std::sync::mpsc;
 /// Destroy the given `p_state_machine`
 pub fn free(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Destroy the state machine");
-
-    {
-        let mut state_machine = p_state_machine.current_state.lock().unwrap();
-        *state_machine = GameWrapper::free();
-    }
 }
 
 /// Ask for establish the connection
 pub fn ask_for_connection(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Ask for connection");
 
-    {
-        let mut state_changer = p_state_machine.current_state.lock().unwrap();
-        match (*state_changer).step(Event::AskForConnection) {
-            Ok(new_state) => *state_changer = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::AskForConnection
+    });
 }
 
 /// Ask for the player to select his role (host or guest)
 pub fn ask_for_select_role(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Ask for select role");
 
-    {
-        let mut state_changer = p_state_machine.current_state.lock().unwrap();
-        match (*state_changer).step(Event::AskForSelectRole) {
-            Ok(new_state) => *state_changer = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::AskForSelectRole
+    });
 }
 
 /// Signal to the given `p_state_machine` that the connection between the guest and the host is established
 pub fn signal_connection_established(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Signal the connection is established");
 
-    {
-        let mut state_changer = p_state_machine.current_state.lock().unwrap();
-        match (*state_changer).step(Event::SignalConnectionReady) {
-            Ok(new_state) => *state_changer = new_state,
-            Err(()) => (),
-        }
-        screen::write_in_grid(&p_state_machine.grid.lock().unwrap())
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::SignalConnectionReady
+    });
 }
 
 /// Signal to the given `p_state_machine` that the game is not finish
 pub fn signal_to_continue_the_game(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Signal to continue the game");
 
-    {
-        let mut state_changer = p_state_machine.current_state.lock().unwrap();
-        match (*state_changer).step(Event::SignalToContinueTheGame) {
-            Ok(new_state) => *state_changer = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::SignalToContinueTheGame
+    });
 }
 
 /// Signal to the given `p_state_machine` that it is the player's turn to play
 pub fn signal_to_play(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Signal at the user to play");
 
-    {
-        let mut state_machine = p_state_machine.current_state.lock().unwrap();
-        match (*state_machine).step(Event::PlayerTurn) {
-            Ok(new_state) => *state_machine = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::PlayerTurn
+    });
 }
 
 /// Signal to the given `p_state_machine` that it is the opponent turn to play
 pub fn ask_for_wait_opponent(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Ask to wait the opponent");
 
-    {
-        let mut state_machine = p_state_machine.current_state.lock().unwrap();
-        match (*state_machine).step(Event::OpponentTurn) {
-            Ok(new_state) => *state_machine = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::OpponentTurn
+    });
 }
 
 /// Signal to the given `p_state_machine` that the round is over
 pub fn signal_finish_turn(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Signal the end of the turn");
 
-    {
-        let mut state_machine = p_state_machine.current_state.lock().unwrap();
-        match (*state_machine).step(Event::TurnFinish) {
-            Ok(new_state) => *state_machine = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::TurnFinish
+    });
 }
 
 /// Signal to the given `p_state_machine` that the game is over
 pub fn signal_game_finish(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : Signal the end of the game");
 
-    {
-        let mut state_machine = p_state_machine.current_state.lock().unwrap();
-        match (*state_machine).step(Event::GameFinish) {
-            Ok(new_state) => *state_machine = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::GameFinish
+    });
 }
 
 /// Signal to the given `p_state_machine` that there is a connection error
 pub fn signal_error_connection(p_state_machine: &StateMachine) {
     info!("[StateMachine] Event : A connection error occur");
 
-    {
-        let mut state_machine = p_state_machine.current_state.lock().unwrap();
-        match (*state_machine).step(Event::ErrorConnection) {
-            Ok(new_state) => *state_machine = new_state,
-            Err(()) => (),
-        }
-    }
+    p_state_machine.sender.send(MqMsg {
+        event: Event::ErrorConnection
+    });
 }
 
 pub struct StateMachine {
-    current_state: Mutex<GameWrapper>,
-    grid: Mutex<Vec<Vec<String>>>,
     sender: Sender<MqMsg>,
     handler: thread::JoinHandle<()>
 }
@@ -169,16 +125,13 @@ impl StateMachine {
     pub fn create_and_start() -> Self {
         info!("[StateMachine] Event : Create the state machine");
 
-        let l_current_state = Mutex::new(GameWrapper::new());
         let l_grid = Mutex::new(game::init_grid());
         let (l_sender, l_receiver): (Sender<MqMsg>, Receiver<MqMsg>) = mpsc::channel();
 
         Self {
-            current_state: Mutex::new(GameWrapper::new()),
-            grid: Mutex::new(game::init_grid()),
             sender: l_sender,
             handler: thread::spawn(move || {
-                run(&l_receiver);
+                run(&l_receiver, &l_grid);
             }),
         }
     }
@@ -186,7 +139,9 @@ impl StateMachine {
     pub fn stop_and_destroy(self) {
         info!("[StateMachine] Event : Stop the state machine");
 
-        // TODO send stop signal
+        self.sender.send(MqMsg {
+            event: Event::Stop
+        });
         self.handler.join().expect("[StateMachine] Error when joining the thread");
 
         // TODO Destroy
@@ -220,6 +175,7 @@ enum Event {
     GameFinish,
     /// Signal to the state machine that there is a connection error, see [signal_error_connection]
     ErrorConnection,
+    Stop,
 }
 
 enum GameWrapper {
@@ -429,7 +385,7 @@ impl GameWrapper {
         GameWrapper::None
     }
 
-    pub fn step(&mut self, event: Event) -> Result<Self, ()> {
+    pub fn step(&mut self, event: &Event) -> Result<Self, ()> {
         match (self, event) {
             (GameWrapper::Init(previous_state), Event::AskForSelectRole) => {
                 Ok(GameWrapper::SelectRole(previous_state.into()))
@@ -470,11 +426,19 @@ impl GameWrapper {
     }
 }
 
-fn run(p_recv: &Receiver<MqMsg>) {
+fn run(p_recv: &Receiver<MqMsg>, p_grid: &Mutex<Vec<Vec<String>>>) {
     info!("[StateMachine] Start the state machine");
+
+    let mut l_current_state: GameWrapper = GameWrapper::new();
 
     loop{
         let l_msg: MqMsg = p_recv.recv().expect("[StateMachine] Error when receiving the message in the channel");
+
+        match l_msg.event {
+            _ => l_current_state.step(&l_msg.event),
+            Event::Stop => break,
+        };
+
 
         // TODO trait the msg
 
