@@ -30,7 +30,7 @@ pub fn main_server() {
                 thread::spawn(move || client_manager(stream, &*address));
             }
             Err(e) => {
-                println!("Connection FAIL due to error : {}", e);
+                println!("Connection FAIL due to ERROR : {}", e);
             }
         }
         println!("Waiting for another client...");

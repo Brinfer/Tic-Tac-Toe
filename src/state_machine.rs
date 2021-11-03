@@ -18,7 +18,7 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{common, error, game, info, screen, warning};
+use crate::{common, ERROR, game, INFO, screen, WARNING, TRACE};
 use std::thread;
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
@@ -31,12 +31,12 @@ use std::sync::mpsc;
 
 /// Destroy the given `p_state_machine`
 pub fn free(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Destroy the state machine");
+    INFO!("[StateMachine] Event : Destroy the state machine");
 }
 
 /// Ask for establish the connection
 pub fn ask_for_connection(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Ask for connection");
+    INFO!("[StateMachine] Event : Ask for connection");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::AskForConnection
@@ -45,7 +45,7 @@ pub fn ask_for_connection(p_state_machine: &StateMachine) {
 
 /// Ask for the player to select his role (host or guest)
 pub fn ask_for_select_role(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Ask for select role");
+    INFO!("[StateMachine] Event : Ask for select role");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::AskForSelectRole
@@ -54,7 +54,7 @@ pub fn ask_for_select_role(p_state_machine: &StateMachine) {
 
 /// Signal to the given `p_state_machine` that the connection between the guest and the host is established
 pub fn signal_connection_established(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Signal the connection is established");
+    INFO!("[StateMachine] Event : Signal the connection is established");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::SignalConnectionReady
@@ -63,7 +63,7 @@ pub fn signal_connection_established(p_state_machine: &StateMachine) {
 
 /// Signal to the given `p_state_machine` that the game is not finish
 pub fn signal_to_continue_the_game(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Signal to continue the game");
+    INFO!("[StateMachine] Event : Signal to continue the game");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::SignalToContinueTheGame
@@ -72,7 +72,7 @@ pub fn signal_to_continue_the_game(p_state_machine: &StateMachine) {
 
 /// Signal to the given `p_state_machine` that it is the player's turn to play
 pub fn signal_to_play(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Signal at the user to play");
+    INFO!("[StateMachine] Event : Signal at the user to play");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::PlayerTurn
@@ -81,7 +81,7 @@ pub fn signal_to_play(p_state_machine: &StateMachine) {
 
 /// Signal to the given `p_state_machine` that it is the opponent turn to play
 pub fn ask_for_wait_opponent(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Ask to wait the opponent");
+    INFO!("[StateMachine] Event : Ask to wait the opponent");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::OpponentTurn
@@ -90,7 +90,7 @@ pub fn ask_for_wait_opponent(p_state_machine: &StateMachine) {
 
 /// Signal to the given `p_state_machine` that the round is over
 pub fn signal_finish_turn(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Signal the end of the turn");
+    INFO!("[StateMachine] Event : Signal the end of the turn");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::TurnFinish
@@ -99,16 +99,16 @@ pub fn signal_finish_turn(p_state_machine: &StateMachine) {
 
 /// Signal to the given `p_state_machine` that the game is over
 pub fn signal_game_finish(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : Signal the end of the game");
+    INFO!("[StateMachine] Event : Signal the end of the game");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::GameFinish
     });
 }
 
-/// Signal to the given `p_state_machine` that there is a connection error
+/// Signal to the given `p_state_machine` that there is a connection ERROR
 pub fn signal_error_connection(p_state_machine: &StateMachine) {
-    info!("[StateMachine] Event : A connection error occur");
+    INFO!("[StateMachine] Event : A connection ERROR occur");
 
     p_state_machine.sender.send(MqMsg {
         event: Event::ErrorConnection
@@ -122,7 +122,7 @@ pub struct StateMachine {
 
 impl StateMachine {
     pub fn create_and_start() -> Self {
-        info!("[StateMachine] Event : Create the state machine");
+        INFO!("[StateMachine] Event : Create the state machine");
 
         let (l_sender, l_receiver): (Sender<MqMsg>, Receiver<MqMsg>) = mpsc::channel();
 
@@ -135,7 +135,7 @@ impl StateMachine {
     }
 
     pub fn stop_and_destroy(self) {
-        info!("[StateMachine] Event : Stop the state machine");
+        INFO!("[StateMachine] Event : Stop the state machine");
 
         self.sender.send(MqMsg {
             event: Event::Stop
@@ -172,7 +172,7 @@ enum Event {
     TurnFinish,
     /// Signal to the state machine that the game is over, see [signal_game_finish]
     GameFinish,
-    /// Signal to the state machine that there is a connection error, see [signal_error_connection]
+    /// Signal to the state machine that there is a connection ERROR, see [signal_error_connection]
     ErrorConnection,
     Stop,
 }
@@ -313,7 +313,7 @@ impl From<&mut Game<WaitingForOpponent>> for Game<ChoiceForGameStatus> {
 //////////////////////////////////////////// Actions //////////////////////////////////////////////////////////////////
 
 fn display_role_selection_screen() {
-    info!("[StateMachine] Action : Display the selection screen");
+    INFO!("[StateMachine] Action : Display the selection screen");
 
     let user_role = screen::role_selection();
 
@@ -325,47 +325,47 @@ fn display_role_selection_screen() {
             // com::client::main();
         }
         _ => {
-            warning!("Unknown role");
+            WARNING!("Unknown role");
             panic!("Unknown role");
         }
     }
 }
 
 fn action_establish_connection() {
-    info!("[StateMachine] Action : Start the game");
+    INFO!("[StateMachine] Action : Start the game");
     // game::init_game();
 }
 
 fn action_display_connection_screen() {
-    info!("[StateMachine] Action : Display the connection screen");
+    INFO!("[StateMachine] Action : Display the connection screen");
 }
 
 fn action_is_my_turn(p_grid: &mut game::Grid) {
-    info!("[StateMachine] Action : Test if it's my turn");
+    INFO!("[StateMachine] Action : Test if it's my turn");
 
     screen::write_in_grid(p_grid, &String::from("X"));
 }
 
 fn action_next_turn(p_grid: &game::Grid) {
-    info!("[StateMachine] Action : Pass to the next turn");
+    INFO!("[StateMachine] Action : Pass to the next turn");
 
     screen::display_grid(p_grid);
 }
 
 fn action_exit_game() {
-    info!("[StateMachine] Action : Exit the game");
+    INFO!("[StateMachine] Action : Exit the game");
 }
 
 fn action_play() {
-    info!("[StateMachine] Action : Player turn");
+    INFO!("[StateMachine] Action : Player turn");
 }
 
 fn action_wait() {
-    info!("[StateMachine] Action : Opponent turn");
+    INFO!("[StateMachine] Action : Opponent turn");
 }
 
 fn action_error_connection() {
-    info!("[StateMachine] Action : Error connection");
+    INFO!("[StateMachine] Action : Error connection");
 }
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
@@ -418,11 +418,11 @@ impl GameWrapper {
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (_, Event::ErrorConnection) => {
-                warning!("[StateMachine] Disconnection");
+                WARNING!("[StateMachine] Disconnection");
                 Err(())
             }
             (_, _) => {
-                error!("[StateMachine] Unsupported transition");
+                ERROR!("[StateMachine] Unsupported transition");
                 Err(())
             }
         }
@@ -430,7 +430,7 @@ impl GameWrapper {
 }
 
 fn run(p_recv: &Receiver<MqMsg>) {
-    info!("[StateMachine] Start the state machine");
+    INFO!("[StateMachine] Start the state machine");
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
     let mut l_grid: game::Grid = game::Grid::new();

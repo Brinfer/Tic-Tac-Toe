@@ -19,7 +19,7 @@ pub fn main() {
         }
         Err(e) => {
             println!(
-                "Conction FAIL.\nCouldn't connect to the server with the following error : {}",
+                "Conction FAIL.\nCouldn't connect to the server with the following ERROR : {}",
                 e
             );
         }

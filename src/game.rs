@@ -4,6 +4,8 @@
 //! Pierre-Louis GAUTIER
 //! Damien FRISSANT
 
+use crate::{DEBUG, TRACE};
+
 const OPPONENT_SYMBOL: &str = "O";
 const PLAYER_SYMBOL: &str = "X";
 
