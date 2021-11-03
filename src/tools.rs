@@ -29,3 +29,5 @@ macro_rules! WARNING {
 macro_rules! ERROR {
     ($($msg:expr),+) => {{ TRACE!(type => "ERROR", $($msg),+); }};
 }
+
+// TODO write log in file ?

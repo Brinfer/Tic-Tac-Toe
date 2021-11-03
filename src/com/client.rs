@@ -6,15 +6,17 @@ use std::io::{stdin, Read, Write};
 use std::net::{Ipv4Addr, TcpStream};
 
 /// Set up the connection with the server
-pub fn main() {
+pub fn set_up() {
     //Choose IP address and port
-    let ip_addr = Ipv4Addr::new(127, 0, 0, 1);
+    let ip_addr = Ipv4Addr::LOCALHOST;
     let port = 1234;
+
     println!("Try to connect to the server...");
+
     //Connection to the server
     match TcpStream::connect((ip_addr, port)) {
         Ok(stream) => {
-            println!("Connection SUCCES !");
+            println!("Connection SUCCESS !");
             server_exchanges(stream);
         }
         Err(e) => {
@@ -24,6 +26,8 @@ pub fn main() {
             );
         }
     }
+
+    // TODO move the client in another thread, handle the good message
 }
 
 fn server_exchanges(mut stream: TcpStream) {

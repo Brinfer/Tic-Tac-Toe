@@ -4,10 +4,9 @@
 //! Pierre-Louis GAUTIER
 //! Damien FRISSANT
 
-use crate::{DEBUG, TRACE};
+use crate::{DEBUG, TRACE, common};
 
-const OPPONENT_SYMBOL: &str = "O";
-const PLAYER_SYMBOL: &str = "X";
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -61,11 +60,11 @@ impl Grid {
     }
 
     fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
-        DEBUG!("Is already taken by opponent ? {}", self.grid[p_x][p_y] == OPPONENT_SYMBOL.to_string());
-        DEBUG!("Is already taken by player ? {}", self.grid[p_x][p_y] == PLAYER_SYMBOL.to_string());
+        DEBUG!("Is already taken by opponent ? {}", self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string());
+        DEBUG!("Is already taken by player ? {}", self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string());
 
-        !(self.grid[p_x][p_y] == OPPONENT_SYMBOL.to_string()
-            || self.grid[p_x][p_y] == PLAYER_SYMBOL.to_string())
+        !(self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
+            || self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string())
     }
 }
 
@@ -88,9 +87,9 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     // Test in the row
     for i in 0..p_grid.len() {
         for j in 0..p_grid[i].len() {
-            if p_grid[i][j] == OPPONENT_SYMBOL {
+            if p_grid[i][j] == common::OPPONENT_SYMBOL {
                 l_counter -= 1;
-            } else if p_grid[i][j] == PLAYER_SYMBOL {
+            } else if p_grid[i][j] == common::PLAYER_SYMBOL {
                 l_counter += 1;
             }
         }
@@ -104,9 +103,9 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     for i in 0..p_grid.len() {
         l_counter = 0;
         for j in 0..p_grid[i].len() {
-            if p_grid[i][j] == OPPONENT_SYMBOL {
+            if p_grid[i][j] == common::OPPONENT_SYMBOL {
                 l_counter -= 1;
-            } else if p_grid[i][j] == PLAYER_SYMBOL {
+            } else if p_grid[i][j] == common::PLAYER_SYMBOL {
                 l_counter += 1;
             }
         }
@@ -119,9 +118,9 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
 
     // Check Left-to-Right downward Diagonal:
     for i in 0..p_grid.len() {
-        if p_grid[i][i] == OPPONENT_SYMBOL {
+        if p_grid[i][i] == common::OPPONENT_SYMBOL {
             l_counter -= 1;
-        } else if p_grid[i][i] == PLAYER_SYMBOL {
+        } else if p_grid[i][i] == common::PLAYER_SYMBOL {
             l_counter += 1;
         }
     }
@@ -134,9 +133,9 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     // Check Left-to-Right upward Diagonal
     l_counter = 0;
     for i in 0..p_grid.len() {
-        if p_grid[i][(p_grid[i].len() - 1) - i] == OPPONENT_SYMBOL {
+        if p_grid[i][(p_grid[i].len() - 1) - i] == common::OPPONENT_SYMBOL {
             l_counter -= 1;
-        } else if p_grid[i][(p_grid[i].len() - 1) - i] == PLAYER_SYMBOL {
+        } else if p_grid[i][(p_grid[i].len() - 1) - i] == common::PLAYER_SYMBOL {
             l_counter += 1;
         }
     }

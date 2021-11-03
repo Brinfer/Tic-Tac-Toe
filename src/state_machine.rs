@@ -18,10 +18,10 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{common, ERROR, game, INFO, screen, WARNING, TRACE};
-use std::thread;
-use std::sync::mpsc::{Sender, Receiver};
+use crate::{common, game, com, screen, DEBUG, ERROR, INFO, TRACE, WARNING};
 use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -29,17 +29,12 @@ use std::sync::mpsc;
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Destroy the given `p_state_machine`
-pub fn free(p_state_machine: &StateMachine) {
-    INFO!("[StateMachine] Event : Destroy the state machine");
-}
-
 /// Ask for establish the connection
 pub fn ask_for_connection(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Ask for connection");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::AskForConnection
+        event: Event::AskForConnection,
     });
 }
 
@@ -48,16 +43,7 @@ pub fn ask_for_select_role(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Ask for select role");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::AskForSelectRole
-    });
-}
-
-/// Signal to the given `p_state_machine` that the connection between the guest and the host is established
-pub fn signal_connection_established(p_state_machine: &StateMachine) {
-    INFO!("[StateMachine] Event : Signal the connection is established");
-
-    p_state_machine.sender.send(MqMsg {
-        event: Event::SignalConnectionReady
+        event: Event::AskForSelectRole,
     });
 }
 
@@ -66,7 +52,7 @@ pub fn signal_to_continue_the_game(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Signal to continue the game");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::SignalToContinueTheGame
+        event: Event::SignalToContinueTheGame,
     });
 }
 
@@ -75,7 +61,7 @@ pub fn signal_to_play(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Signal at the user to play");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::PlayerTurn
+        event: Event::PlayerTurn,
     });
 }
 
@@ -84,7 +70,7 @@ pub fn ask_for_wait_opponent(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Ask to wait the opponent");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::OpponentTurn
+        event: Event::OpponentTurn,
     });
 }
 
@@ -93,7 +79,7 @@ pub fn signal_finish_turn(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Signal the end of the turn");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::TurnFinish
+        event: Event::TurnFinish,
     });
 }
 
@@ -102,7 +88,7 @@ pub fn signal_game_finish(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : Signal the end of the game");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::GameFinish
+        event: Event::GameFinish,
     });
 }
 
@@ -111,13 +97,14 @@ pub fn signal_error_connection(p_state_machine: &StateMachine) {
     INFO!("[StateMachine] Event : A connection ERROR occur");
 
     p_state_machine.sender.send(MqMsg {
-        event: Event::ErrorConnection
+        event: Event::ErrorConnection,
     });
 }
 
 pub struct StateMachine {
     sender: Sender<MqMsg>,
-    handler: thread::JoinHandle<()>
+    is_host: bool,
+    handler: thread::JoinHandle<()>,
 }
 
 impl StateMachine {
@@ -128,6 +115,7 @@ impl StateMachine {
 
         Self {
             sender: l_sender,
+            is_host: false, // Temp value
             handler: thread::spawn(move || {
                 run(&l_receiver);
             }),
@@ -137,12 +125,12 @@ impl StateMachine {
     pub fn stop_and_destroy(self) {
         INFO!("[StateMachine] Event : Stop the state machine");
 
-        self.sender.send(MqMsg {
-            event: Event::Stop
-        });
-        self.handler.join().expect("[StateMachine] Error when joining the thread");
+        self.sender.send(MqMsg { event: Event::Stop });
+        self.handler
+            .join()
+            .expect("[StateMachine] Error when joining the thread");
 
-        // TODO Destroy
+        INFO!("[StateMachine] Event : Destroy the state machine");
     }
 }
 
@@ -153,13 +141,10 @@ impl StateMachine {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The different events that can affect the state machine
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum Event {
     /// Ask to the player to select a role (host or guest), see [ask_for_select_role]
     AskForSelectRole,
-    /// Signal to the state machine that the connection is ready see [signal_connection_established]
-    SignalConnectionReady,
     /// Ask the state machine to establish a connection, see [ask_for_connection]
     AskForConnection,
     /// Signal to the state machine that the is not finish, see [signal_to_continue_the_game]
@@ -178,10 +163,9 @@ enum Event {
 }
 
 enum GameWrapper {
-    None,
-    Init(Game<Init>),
     SelectRole(Game<SelectRole>),
-    WaitingForConnection(Game<WaitingForConnection>),
+    WaitingForConnectionHost(Game<WaitingForConnectionHost>),
+    WaitingForConnectionGuest(Game<WaitingForConnectionGuest>),
     ChoiceForGameStatus(Game<ChoiceForGameStatus>),
     ChoiceForPlayer(Game<ChoiceForPlayer>),
     Playing(Game<Playing>),
@@ -195,13 +179,13 @@ struct MqMsg {
 }
 
 #[derive(Debug)]
-struct Init {}
-
-#[derive(Debug)]
 struct SelectRole {}
 
 #[derive(Debug)]
-struct WaitingForConnection {}
+struct WaitingForConnectionHost {}
+
+#[derive(Debug)]
+struct WaitingForConnectionGuest {}
 
 #[derive(Debug)]
 struct ChoiceForGameStatus {}
@@ -225,20 +209,34 @@ struct Game<State> {
 
 ////////////////////////////////////////// Transitions ////////////////////////////////////////////////////////////////
 
-impl From<&mut Game<Init>> for Game<SelectRole> {
-    fn from(_previous_state: &mut Game<Init>) -> Game<SelectRole> {
-        // display_role_selection_screen();
+impl From<&mut Game<SelectRole>> for Game<WaitingForConnectionHost> {
+    fn from(_previous_state: &mut Game<SelectRole>) -> Game<WaitingForConnectionHost> {
         Game {
-            state: SelectRole {},
+            state: WaitingForConnectionHost {},
         }
     }
 }
 
-impl From<&mut Game<SelectRole>> for Game<WaitingForConnection> {
-    fn from(_previous_state: &mut Game<SelectRole>) -> Game<WaitingForConnection> {
-        action_display_connection_screen();
+impl From<&mut Game<SelectRole>> for Game<WaitingForConnectionGuest> {
+    fn from(_previous_state: &mut Game<SelectRole>) -> Game<WaitingForConnectionGuest> {
         Game {
-            state: WaitingForConnection {},
+            state: WaitingForConnectionGuest {},
+        }
+    }
+}
+
+impl From<&mut Game<WaitingForConnectionGuest>> for Game<ChoiceForGameStatus> {
+    fn from(_previous_state: &mut Game<WaitingForConnectionGuest>) -> Game<ChoiceForGameStatus> {
+        Game {
+            state: ChoiceForGameStatus {},
+        }
+    }
+}
+
+impl From<&mut Game<WaitingForConnectionHost>> for Game<ChoiceForGameStatus> {
+    fn from(_previous_state: &mut Game<WaitingForConnectionHost>) -> Game<ChoiceForGameStatus> {
+        Game {
+            state: ChoiceForGameStatus {},
         }
     }
 }
@@ -251,43 +249,30 @@ impl From<&mut Game<ChoiceForGameStatus>> for Game<ChoiceForPlayer> {
     }
 }
 
-impl From<&mut Game<ChoiceForGameStatus>> for Game<WaitingForConnection> {
-    fn from(_previous_state: &mut Game<ChoiceForGameStatus>) -> Game<WaitingForConnection> {
-        action_exit_game();
+impl From<&mut Game<ChoiceForGameStatus>> for Game<WaitingForConnectionHost> {
+    fn from(_previous_state: &mut Game<ChoiceForGameStatus>) -> Game<WaitingForConnectionHost> {
         Game {
-            state: WaitingForConnection {},
+            state: WaitingForConnectionHost {},
         }
     }
 }
 
-impl From<&mut Game<ChoiceForPlayer>> for Game<WaitingForConnection> {
-    fn from(_previous_state: &mut Game<ChoiceForPlayer>) -> Game<WaitingForConnection> {
-        action_error_connection();
+impl From<&mut Game<ChoiceForPlayer>> for Game<WaitingForConnectionHost> {
+    fn from(_previous_state: &mut Game<ChoiceForPlayer>) -> Game<WaitingForConnectionHost> {
         Game {
-            state: WaitingForConnection {},
-        }
-    }
-}
-
-impl From<&mut Game<WaitingForConnection>> for Game<ChoiceForGameStatus> {
-    fn from(_previous_state: &mut Game<WaitingForConnection>) -> Game<ChoiceForGameStatus> {
-        action_establish_connection();
-        Game {
-            state: ChoiceForGameStatus {},
+            state: WaitingForConnectionHost {},
         }
     }
 }
 
 impl From<&mut Game<ChoiceForPlayer>> for Game<Playing> {
     fn from(_previous_state: &mut Game<ChoiceForPlayer>) -> Game<Playing> {
-        action_play();
         Game { state: Playing {} }
     }
 }
 
 impl From<&mut Game<ChoiceForPlayer>> for Game<WaitingForOpponent> {
     fn from(_previous_state: &mut Game<ChoiceForPlayer>) -> Game<WaitingForOpponent> {
-        action_wait();
         Game {
             state: WaitingForOpponent {},
         }
@@ -312,31 +297,24 @@ impl From<&mut Game<WaitingForOpponent>> for Game<ChoiceForGameStatus> {
 
 //////////////////////////////////////////// Actions //////////////////////////////////////////////////////////////////
 
-fn display_role_selection_screen() {
-    INFO!("[StateMachine] Action : Display the selection screen");
+fn action_select_role() -> common::PlayerRole {
+    INFO!("[StateMachine] Action : Select the role");
 
-    let user_role = screen::role_selection();
-
-    match user_role {
-        common::PlayerRole::HOST => {
-            // com::server::main_server();
-        }
-        common::PlayerRole::GUEST => {
-            // com::client::main();
-        }
-        _ => {
-            WARNING!("Unknown role");
-            panic!("Unknown role");
-        }
-    }
+    screen::display_role_selection_screen()
 }
 
-fn action_establish_connection() {
-    INFO!("[StateMachine] Action : Start the game");
+fn action_establish_connection_host() {
+    INFO!("[StateMachine] Action : Establish connection for the host");
+    com::server::set_up();
+}
+
+fn action_establish_connection_guest() {
+    INFO!("[StateMachine] Action : Establish connection for the guest");
     // game::init_game();
+    com::client::set_up();
 }
 
-fn action_display_connection_screen() {
+fn action_display_selection_role_screen() {
     INFO!("[StateMachine] Action : Display the connection screen");
 }
 
@@ -370,30 +348,49 @@ fn action_error_connection() {
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
 
-impl Game<Init> {
+impl Game<SelectRole> {
     pub fn new() -> Self {
-        Game { state: Init {} }
+        Game { state: SelectRole {} }
+    }
+}
+
+impl Game<ErrorConnection> {
+    pub fn error_connection() -> Self {
+        Game {
+            state: ErrorConnection {},
+        }
     }
 }
 
 impl GameWrapper {
     pub fn new() -> Self {
-        GameWrapper::Init(Game::new())
-    }
-
-    pub fn free() -> Self {
-        GameWrapper::None
+        GameWrapper::SelectRole(Game::new())
     }
 
     pub fn step(&mut self, event: &Event, p_grid: &mut game::Grid) -> Result<Self, ()> {
         match (self, event) {
-            (GameWrapper::Init(previous_state), Event::AskForSelectRole) => {
-                Ok(GameWrapper::SelectRole(previous_state.into()))
+            (GameWrapper::SelectRole(previous_state), Event::AskForSelectRole) => {
+                match action_select_role() {
+                    common::PlayerRole::GUEST => {
+                        DEBUG!("Player is the guest");
+                        return Ok(GameWrapper::WaitingForConnectionGuest(previous_state.into()));
+                    }
+                    common::PlayerRole::HOST => {
+                        DEBUG!("Player is the host");
+                        return Ok(GameWrapper::WaitingForConnectionHost(previous_state.into()));
+                    }
+                    _ => {
+                        DEBUG!("Player quit the game");
+                        return Err(());
+                    }
+                };
             }
-            (GameWrapper::SelectRole(previous_state), Event::AskForConnection) => {
-                Ok(GameWrapper::WaitingForConnection(previous_state.into()))
+            (GameWrapper::WaitingForConnectionGuest(previous_state), Event::AskForConnection) => {
+                action_establish_connection_guest();
+                Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
-            (GameWrapper::WaitingForConnection(previous_state), Event::SignalConnectionReady) => {
+            (GameWrapper::WaitingForConnectionHost(previous_state), Event::AskForConnection) => {
+                action_establish_connection_host();
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (GameWrapper::ChoiceForGameStatus(previous_state), Event::SignalToContinueTheGame) => {
@@ -401,13 +398,15 @@ impl GameWrapper {
                 Ok(GameWrapper::ChoiceForPlayer(previous_state.into()))
             }
             (GameWrapper::ChoiceForGameStatus(previous_state), Event::GameFinish) => {
-                Ok(GameWrapper::WaitingForConnection(previous_state.into()))
+                action_error_connection();
+                Ok(GameWrapper::WaitingForConnectionHost(previous_state.into()))
             }
             (GameWrapper::ChoiceForPlayer(previous_state), Event::PlayerTurn) => {
-                action_next_turn(&p_grid);
+                action_play();
                 Ok(GameWrapper::Playing(previous_state.into()))
             }
             (GameWrapper::ChoiceForPlayer(previous_state), Event::OpponentTurn) => {
+                action_wait();
                 Ok(GameWrapper::WaitingForOpponent(previous_state.into()))
             }
             (GameWrapper::Playing(previous_state), Event::TurnFinish) => {
@@ -419,7 +418,8 @@ impl GameWrapper {
             }
             (_, Event::ErrorConnection) => {
                 WARNING!("[StateMachine] Disconnection");
-                Err(())
+                action_exit_game();
+                Ok(GameWrapper::ErrorConnection(Game::error_connection()))
             }
             (_, _) => {
                 ERROR!("[StateMachine] Unsupported transition");
@@ -434,12 +434,15 @@ fn run(p_recv: &Receiver<MqMsg>) {
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
     let mut l_grid: game::Grid = game::Grid::new();
-    loop{
-        let l_msg: MqMsg = p_recv.recv().expect("[StateMachine] Error when receiving the message in the channel");
+
+    loop {
+        let l_msg: MqMsg = p_recv
+            .recv()
+            .expect("[StateMachine] Error when receiving the message in the channel");
 
         match l_msg.event {
-            _ => l_current_state = l_current_state.step(&l_msg.event, &mut l_grid).unwrap(),
             Event::Stop => break,
+            _ => l_current_state = l_current_state.step(&l_msg.event, &mut l_grid).unwrap(),
         };
 
         // TODO trait the msg
