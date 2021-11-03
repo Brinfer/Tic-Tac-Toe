@@ -44,40 +44,36 @@ impl Grid {
         self.grid[p_x][p_y].to_string()
     }
 
-    pub fn set_cell(&mut self, p_x: usize, p_y: usize, p_value: &String) {
-        self.grid[p_x][p_y] = p_value.to_string();
+    pub fn set_cell(&mut self, p_x: usize, p_y: usize, p_value: &String) -> bool {
+        DEBUG!("Row to change {}", p_x);
+        DEBUG!("Column to change {}", p_y);
+
+        if p_x < self.grid.len() && p_y < self.grid[0].len() {
+            if self.cell_is_free(p_x, p_y) {
+                self.grid[p_x][p_y] = p_value.to_string();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
+        DEBUG!("Is already taken by opponent ? {}", self.grid[p_x][p_y] == OPPONENT_SYMBOL.to_string());
+        DEBUG!("Is already taken by player ? {}", self.grid[p_x][p_y] == PLAYER_SYMBOL.to_string());
+
+        !(self.grid[p_x][p_y] == OPPONENT_SYMBOL.to_string()
+            || self.grid[p_x][p_y] == PLAYER_SYMBOL.to_string())
     }
 }
 
-pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) {
+pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) -> bool {
     let p_x: usize = (p_cell as usize) / p_grid.len();
     let p_y: usize = (p_cell as usize) % p_grid.len();
 
-    println!("Row {}", p_x);
-    println!("Column {}", p_y);
-
-    p_grid.set_cell(p_x, p_y, p_value);
-
-    // let flattened = p_grid.clone().into_iter().flatten().collect::<Vec<String>>();
-
-    // println!("{:?}", flattened);
-
-    // if flattened[p_cell] == OPPONENT_SYMBOL || flattened[p_cell] == PLAYER_SYMBOL {
-    //     println!("Cell already taken");
-    // } else {
-
-    // }
-
-    // let l_contain = &p_grid[p_grid.len() % (p_cell as usize)][p_grid.len() % (p_cell as usize) - p_grid.len()];
-
-    // match l_contain.as_str() {
-    //     OPPONENT_SYMBOL | PLAYER_SYMBOL => {
-    //         println!("Already taken");
-    //     }
-    //     _ => {
-    //         println!("OK");
-    //     }
-    // }
+    p_grid.set_cell(p_x, p_y, p_value)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

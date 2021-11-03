@@ -47,14 +47,30 @@ pub fn display_grid(p_grid: &game::Grid) {
 }
 
 pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
-
     // TODO Protect against bad enter, remove the loop
 
     loop {
         display_grid(p_grid);
         println!("Enter the number of the box you wish to fill in");
-        let l_number: u8 = read_keyboard().parse().unwrap();
-        game::change_cell(p_grid, l_number, p_value);
+
+        let mut is_valid: bool = false;
+
+        while is_valid == false {
+            match read_keyboard().parse() {
+                Ok(l_cell) => {
+                    if game::change_cell(p_grid, l_cell, p_value) {
+                        is_valid = true;
+                    } else {
+                        println!("Bad entry, the cell is already taken or out of range");
+                    }
+                }
+                Err(_) => {
+                    println!("Bad entry, please retry");
+                }
+            }
+        }
+
+
     }
 }
 
