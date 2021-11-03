@@ -5,7 +5,7 @@
 //! Damien FRISSANT
 
 use crate::{DEBUG, TRACE, common};
-
+use std::fmt;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,6 +65,21 @@ impl Grid {
 
         !(self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
             || self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string())
+    }
+}
+
+impl fmt::Display for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut l_grid : String = format!("{}+\n", "+-----".repeat(self.grid.len()));
+        for i in 0..self.grid.len() {
+            l_grid.push_str(&format!("|"));
+            for j in 0..self.grid[i].len() {
+                l_grid.push_str(&format!("{:^5}|", self.grid[i][j]));
+            }
+            l_grid.push_str(&format!("\n{}+\n", "+-----".repeat(self.grid[i].len())));
+        }
+
+        write!(f, "{}", l_grid)
     }
 }
 

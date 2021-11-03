@@ -1,3 +1,8 @@
+//! TODO
+//!
+//! # Author
+//! Pierre-Louis GAUTIER
+
 #[macro_export]
 macro_rules! TRACE {
     (type=>$tp:expr, $($arg:tt)+) => {{ TRACE!("{} >> {}", $tp, format_args!($($arg)+)); }};

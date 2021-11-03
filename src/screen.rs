@@ -1,3 +1,8 @@
+//! TODO
+//!
+//! # Author
+//! Pierre-Louis GAUTIER
+
 use crate::common;
 use crate::game;
 use std::io::stdin;
@@ -35,21 +40,9 @@ pub fn display_role_selection_screen() -> common::PlayerRole {
     return answer;
 }
 
-pub fn display_grid(p_grid: &game::Grid) {
-    println!("{}+", "+-----".repeat(p_grid.len()));
-    for i in 0..p_grid.len() {
-        print!("|");
-        for j in 0..p_grid.get_column(i).len() {
-            print!("{:^5}|", p_grid.get_cell(i, j));
-        }
-        println!("\n{}+", "+-----".repeat(p_grid.get_column(i).len()));
-    }
-}
-
 pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
-    // TODO Protect against bad enter, remove the loop
 
-    display_grid(p_grid);
+    println!("{}", p_grid);
     println!("Enter the number of the box you wish to fill in");
 
     let mut is_valid: bool = false;
