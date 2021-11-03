@@ -1,9 +1,9 @@
-mod state_machine;
+mod com;
+mod common;
 mod game;
 mod screen;
-mod com;
+mod state_machine;
 mod tools;
-mod common;
 
 fn main() {
     INFO!("[Main] Program Started");
@@ -12,7 +12,6 @@ fn main() {
 
     state_machine::ask_for_select_role(&game_state_machine);
     state_machine::ask_for_connection(&game_state_machine);
-    state_machine::signal_connection_established(&game_state_machine);
     state_machine::signal_to_continue_the_game(&game_state_machine);
 
     INFO!("[Main] Connection Established");

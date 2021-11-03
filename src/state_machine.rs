@@ -18,7 +18,8 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{common, game, com, screen, DEBUG, ERROR, INFO, TRACE, WARNING};
+use crate::{com, common, game, screen, DEBUG, ERROR, INFO, TRACE, WARNING};
+use std::net::TcpStream;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -303,19 +304,22 @@ fn action_select_role() -> common::PlayerRole {
     screen::display_role_selection_screen()
 }
 
-fn action_establish_connection_host() {
+fn action_establish_connection_host() -> Result<TcpStream, ()> {
     INFO!("[StateMachine] Action : Establish connection for the host");
-    com::server::set_up();
+    com::server::set_up()
 }
 
-fn action_establish_connection_guest() {
+fn action_establish_connection_guest() -> Result<TcpStream, ()> {
     INFO!("[StateMachine] Action : Establish connection for the guest");
-    // game::init_game();
-    com::client::set_up();
+    // TODO enter custom ip address and custom port
+    com::client::set_up()
 }
 
-fn action_display_selection_role_screen() {
-    INFO!("[StateMachine] Action : Display the connection screen");
+fn action_choice_game_status(p_grid: &game::Grid) {
+    INFO!("[StateMachine] Action : Choice the game status");
+    // TODO display Grid, choose if the party is finish
+    println!("{}", p_grid);
+    game::is_over(p_grid);
 }
 
 fn action_is_my_turn(p_grid: &mut game::Grid) {
@@ -327,7 +331,7 @@ fn action_is_my_turn(p_grid: &mut game::Grid) {
 fn action_next_turn(p_grid: &game::Grid) {
     INFO!("[StateMachine] Action : Pass to the next turn");
 
-    screen::display_grid(p_grid);
+    println!("{}", p_grid);
 }
 
 fn action_exit_game() {
@@ -350,7 +354,9 @@ fn action_error_connection() {
 
 impl Game<SelectRole> {
     pub fn new() -> Self {
-        Game { state: SelectRole {} }
+        Game {
+            state: SelectRole {},
+        }
     }
 }
 
@@ -367,30 +373,58 @@ impl GameWrapper {
         GameWrapper::SelectRole(Game::new())
     }
 
-    pub fn step(&mut self, event: &Event, p_grid: &mut game::Grid) -> Result<Self, ()> {
+    pub fn step(
+        &mut self,
+        event: &Event,
+        p_grid: &mut game::Grid,
+        p_comm: &mut Option<TcpStream>,
+    ) -> Result<Self, ()> {
         match (self, event) {
             (GameWrapper::SelectRole(previous_state), Event::AskForSelectRole) => {
                 match action_select_role() {
                     common::PlayerRole::GUEST => {
-                        DEBUG!("Player is the guest");
-                        return Ok(GameWrapper::WaitingForConnectionGuest(previous_state.into()));
+                        DEBUG!("[StateMachine] Player is the guest");
+                        return Ok(GameWrapper::WaitingForConnectionGuest(
+                            previous_state.into(),
+                        ));
                     }
                     common::PlayerRole::HOST => {
-                        DEBUG!("Player is the host");
+                        DEBUG!("[StateMachine] Player is the host");
                         return Ok(GameWrapper::WaitingForConnectionHost(previous_state.into()));
                     }
                     _ => {
-                        DEBUG!("Player quit the game");
+                        DEBUG!("[StateMachine] Player quit the game");
                         return Err(());
                     }
                 };
             }
             (GameWrapper::WaitingForConnectionGuest(previous_state), Event::AskForConnection) => {
-                action_establish_connection_guest();
+                match action_establish_connection_guest() {
+                    Ok(l_stream) => *p_comm = Some(l_stream),
+                    Err(_) => {
+                        ERROR! {"[StateMachine] Impossible to connect"}
+                        return Err(());
+                    }
+                }
+                action_choice_game_status(&p_grid);
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (GameWrapper::WaitingForConnectionHost(previous_state), Event::AskForConnection) => {
-                action_establish_connection_host();
+                match action_establish_connection_host() {
+                    Ok(l_stream) => *p_comm = Some(l_stream),
+                    Err(_) => {
+                        ERROR! {"[StateMachine] Impossible to connect"}
+                        return Err(());
+                    }
+                }
+                action_choice_game_status(&p_grid);
+                Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
+            }
+            (GameWrapper::Playing(previous_state), Event::TurnFinish) => {
+                Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
+            }
+            (GameWrapper::WaitingForOpponent(previous_state), Event::TurnFinish) => {
+                action_next_turn(&p_grid);
                 Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
             }
             (GameWrapper::ChoiceForGameStatus(previous_state), Event::SignalToContinueTheGame) => {
@@ -409,13 +443,7 @@ impl GameWrapper {
                 action_wait();
                 Ok(GameWrapper::WaitingForOpponent(previous_state.into()))
             }
-            (GameWrapper::Playing(previous_state), Event::TurnFinish) => {
-                Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
-            }
-            (GameWrapper::WaitingForOpponent(previous_state), Event::TurnFinish) => {
-                action_next_turn(&p_grid);
-                Ok(GameWrapper::ChoiceForGameStatus(previous_state.into()))
-            }
+
             (_, Event::ErrorConnection) => {
                 WARNING!("[StateMachine] Disconnection");
                 action_exit_game();
@@ -434,6 +462,7 @@ fn run(p_recv: &Receiver<MqMsg>) {
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
     let mut l_grid: game::Grid = game::Grid::new();
+    let mut l_comm: Option<TcpStream> = None;
 
     loop {
         let l_msg: MqMsg = p_recv
@@ -442,7 +471,11 @@ fn run(p_recv: &Receiver<MqMsg>) {
 
         match l_msg.event {
             Event::Stop => break,
-            _ => l_current_state = l_current_state.step(&l_msg.event, &mut l_grid).unwrap(),
+            _ => {
+                l_current_state = l_current_state
+                    .step(&l_msg.event, &mut l_grid, &mut l_comm)
+                    .unwrap()
+            }
         };
 
         // TODO trait the msg

@@ -1,50 +1,48 @@
-//!Author : Damien Frissant
+//! TODO
+//!
+//! # Author
+//! Damien FRISSANT
 
-//! Ipv4Addr => use to declare port and ipv4 adress
-//! TcpStream => Read and write network stream
 use std::io::{stdin, Read, Write};
 use std::net::{Ipv4Addr, TcpStream};
+use crate::{common, TRACE, ERROR};
 
 /// Set up the connection with the server
-pub fn set_up() {
+pub fn set_up() -> Result<TcpStream, ()>{
     //Choose IP address and port
     let ip_addr = Ipv4Addr::LOCALHOST;
     let port = 1234;
 
-    println!("Try to connect to the server...");
+    println!("Try to connect to the server ... {}:{}", ip_addr, port);
 
-    //Connection to the server
     match TcpStream::connect((ip_addr, port)) {
-        Ok(stream) => {
-            println!("Connection SUCCESS !");
-            server_exchanges(stream);
+        Ok(l_stream) => {
+            println!("Connection success !");
+            Ok(l_stream)
         }
         Err(e) => {
-            println!(
-                "Conction FAIL.\nCouldn't connect to the server with the following ERROR : {}",
-                e
-            );
+            println!("Fail to connect to the server");
+            ERROR!("Couldn't connect, error : {}",e);
+            Err(())
         }
     }
-
-    // TODO move the client in another thread, handle the good message
 }
 
 fn server_exchanges(mut stream: TcpStream) {
-    //Add fix symbole to the terminal
     let stdout = std::io::stdout();
-    let mut handle = stdout.lock();
+    let mut terminal = stdout.lock();
 
     //Maximum size buffer
-    let buf = &mut [0; 1024];
+    let buf = &mut [0; std::mem::size_of::<common::Message>()];
     let mut message: Vec<u8> = Vec::new();
 
-    println!("Entre 'exit' to leave\n");
+    println!("Entre 'q' to leave\n");
+
     loop {
         //The symbole '>' is write into the terminal
-        write!(handle, "> ").expect("Couldn't write into handle the caractere '>'");
+        write!(terminal, "> ").expect("Couldn't write into handle the caractere '>'");
         //make sure that the buffered content reach its destination
-        handle.flush().expect("Couldn’t flush from stdin");
+        terminal.flush().expect("Couldn’t flush from stdin");
         match &*get_keypad() {
             "exit" => {
                 println!("Good bye !");

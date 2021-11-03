@@ -90,6 +90,10 @@ pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) -> bool {
     p_grid.set_cell(p_x, p_y, p_value)
 }
 
+pub fn is_over(p_grid : &Grid) {
+    test_winner(&p_grid.grid);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Private
