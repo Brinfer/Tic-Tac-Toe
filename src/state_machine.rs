@@ -206,9 +206,7 @@ fn action_next_turn(
 
 fn action_end_turn(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
     INFO!("[StateMachine] - Action : End Turn");
-    // TODO Test winner
     if game::is_over(&_p_grid) {
-        // There is a winner
         _p_sender.send(MqMsg {
             event: Event::EndGame,
         }).expect("Can not send the event EndGame");
@@ -232,7 +230,6 @@ fn action_player_one(
     _p_sender.send(MqMsg {
         event: Event::EndTurn,
     }).expect("Can not send event endTurn");
-    // TODO capture keyboard, set gird
 }
 
 fn action_player_two(
@@ -249,7 +246,6 @@ fn action_player_two(
         event: Event::EndTurn,
     }).expect("Can not send event endTurn");
 
-    // TODO capture keyboard, set grid
 }
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
