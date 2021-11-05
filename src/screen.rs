@@ -3,7 +3,6 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::common;
 use crate::game;
 use crate::{DEBUG, ERROR, INFO, TRACE, WARNING};
 use std::io::stdin;
@@ -62,20 +61,7 @@ pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
     println!("{}", p_grid);
     println!("Enter the number of the box you wish to fill in");
     let mut is_valid: bool = false;
-    while is_valid == false {
-        match read_keyboard().parse() {
-            Ok(l_cell) => {
-                if game::change_cell(p_grid, l_cell, p_value) {
-                    is_valid = true;
-                } else {
-                    println!("Bad entry, the cell is already taken or out of range");
-                }
-            }
-            Err(_) => {
-                println!("Bad entry, please retry");
-            }
-        }
-    }
+    
 }
 
 fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
@@ -90,7 +76,9 @@ fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
             MqScreen::Message { msg } => {
                 println!("{}", msg);
             }
-            MqScreen::Quit => { break;}
+            MqScreen::Quit => { 
+                println!("QUIT");
+                break;}
         }
     }
 }
@@ -101,12 +89,3 @@ fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn read_keyboard() -> String {
-    let mut buf = String::new();
-    stdin()
-        .read_line(&mut buf)
-        .expect("\x1B[31mCouldn't read line\x1B[0m");
-    //To don't care about the letter case, every thing is in lowercase
-    buf.to_lowercase();
-    buf.replace("\n", "").replace("\r", "")
-}

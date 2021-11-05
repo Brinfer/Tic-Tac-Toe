@@ -1,10 +1,7 @@
-use crate::game;
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum PlayerRole {
-    UNKNOWN = 0,
-    HOST,
-    GUEST,
+#[derive(Debug, Copy, Clone)]
+pub enum Player {
+    PlayerOne,
+    PlayerTwo, 
 }
 
 pub struct Message {
@@ -13,13 +10,3 @@ pub struct Message {
 
 pub const OPPONENT_SYMBOL: &str = "O";
 pub const PLAYER_SYMBOL: &str = "X";
-
-
-pub struct CurrentPlayer {
-    pub player: PlayerRole,
-}
-
-pub struct GameIsOver{
-    pub gameStatus: bool,
-}
-

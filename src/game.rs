@@ -4,18 +4,19 @@
 //! Pierre-Louis GAUTIER
 //! Damien FRISSANT
 
-use crate::{DEBUG, TRACE, common};
+use crate::{common, DEBUG, TRACE};
 use std::fmt;
-
+use std::io::stdin;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Public
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+#[derive(Debug, Clone)]
 pub struct Grid {
     grid: Vec<Vec<String>>,
+    current_player: common::Player,
 }
 
 impl Grid {
@@ -28,7 +29,10 @@ impl Grid {
             }
         }
 
-        Grid { grid: l_grid }
+        Grid {
+            grid: l_grid,
+            current_player: common::Player::PlayerOne,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -60,17 +64,37 @@ impl Grid {
     }
 
     fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
-        DEBUG!("Is already taken by opponent ? {}", self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string());
-        DEBUG!("Is already taken by player ? {}", self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string());
+        DEBUG!(
+            "Is already taken by opponent ? {}",
+            self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
+        );
+        DEBUG!(
+            "Is already taken by player ? {}",
+            self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string()
+        );
 
         !(self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
             || self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string())
+    }
+
+    pub fn toggle_player(&mut self) {
+        self.current_player = match self.current_player {
+            common::Player::PlayerOne => common::Player::PlayerTwo,
+            common::Player::PlayerTwo => common::Player::PlayerOne,
+        }
+    }
+
+    pub fn current_symbole(&self) -> &str {
+        match self.current_player {
+            common::Player::PlayerOne => common::PLAYER_SYMBOL,
+            common::Player::PlayerTwo => common::OPPONENT_SYMBOL,
+        }
     }
 }
 
 impl fmt::Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut l_grid : String = format!("{}+\n", "+-----".repeat(self.grid.len()));
+        let mut l_grid: String = format!("{}+\n", "+-----".repeat(self.grid.len()));
         for i in 0..self.grid.len() {
             l_grid.push_str(&format!("|"));
             for j in 0..self.grid[i].len() {
@@ -90,8 +114,26 @@ pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) -> bool {
     p_grid.set_cell(p_x, p_y, p_value)
 }
 
-pub fn is_over(p_grid : &Grid) {
-    test_winner(&p_grid.grid);
+pub fn is_over(p_grid: &Grid) -> bool {
+    test_winner(&p_grid.grid)
+}
+
+pub fn player_turn(p_grid: &mut Grid) {
+    let mut is_valid: bool = false;
+    while is_valid == false {
+        match read_keyboard().parse() {
+            Ok(l_cell) => {
+                if change_cell(p_grid, l_cell, &String::from(p_grid.current_symbole())) {
+                    is_valid = true;
+                } else {
+                    println!("Bad entry, the cell is already taken or out of range");
+                }
+            }
+            Err(_) => {
+                println!("Bad entry, please retry");
+            }
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,9 +142,10 @@ pub fn is_over(p_grid : &Grid) {
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn test_winner(p_grid: &Vec<Vec<String>>) {
+fn test_winner(p_grid: &Vec<Vec<String>>) -> bool {
+    //TODO optimize the "winner" variable
     let mut l_counter: i8 = 0;
-
+    let mut winner = false;
     // Test in the row
     for i in 0..p_grid.len() {
         for j in 0..p_grid[i].len() {
@@ -115,7 +158,7 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     }
 
     if (l_counter >= 3) || (l_counter <= -3) {
-        println!("There is a winner");
+        winner = true;
     }
 
     // Test in the column
@@ -129,7 +172,7 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
             }
         }
         if (l_counter >= 3) || (l_counter <= -3) {
-            println!("There is a winner");
+            winner = true;
         }
     }
 
@@ -145,7 +188,7 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     }
 
     if (l_counter >= 3) || (l_counter <= -3) {
-        println!("There is a winner");
+        winner = true;
     }
     // TODO Rationalize
 
@@ -160,6 +203,17 @@ fn test_winner(p_grid: &Vec<Vec<String>>) {
     }
 
     if (l_counter >= 3) || (l_counter <= -3) {
-        println!("There is a winner");
+        winner = true;
     }
+    return winner;
+}
+
+fn read_keyboard() -> String {
+    let mut buf = String::new();
+    stdin()
+        .read_line(&mut buf)
+        .expect("\x1B[31mCouldn't read line\x1B[0m");
+    //To don't care about the letter case, every thing is in lowercase
+    buf.to_lowercase();
+    buf.replace("\n", "").replace("\r", "")
 }
