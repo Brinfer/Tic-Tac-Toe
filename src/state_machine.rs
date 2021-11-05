@@ -18,7 +18,7 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{game, screen, DEBUG, INFO, TRACE, WARNING};
+use crate::{common, game, screen, DEBUG, INFO, TRACE, WARNING};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -40,6 +40,7 @@ impl StateMachine {
 
         let (l_sender, l_receiver): (Sender<MqMsg>, Receiver<MqMsg>) = mpsc::channel();
         let l_sender_copy: Sender<MqMsg> = l_sender.clone();
+
         Self {
             sender: l_sender,
             handler: thread::spawn(move || {
@@ -48,39 +49,20 @@ impl StateMachine {
         }
     }
 
-    pub fn stop_and_free(self) {
-        INFO!("[StateMachine] Event : Stop the state machine");
-
-        self.sender
-            .send(MqMsg { event: Event::Quit })
-            .expect("Can not send event Quit");
-        self.handler
-            .join()
-            .expect("[StateMachine] Error when joining the thread");
-
-        INFO!("[StateMachine] Event : Destroy the state machine");
-    }
-
-    ///////////////////////////////////////////////////// Events //////////////////////////////////////////////////////
-
-    pub fn player_one_turn(&self) {
-        INFO!("[StateMachine] - Event : Signal player one turn");
+    pub fn start_game(&self) {
+        INFO!("[StateMachine] Event : Start the game");
 
         self.sender
             .send(MqMsg {
                 event: Event::PlayerOneTurn,
             })
-            .expect("Can not send the event PlayerOneTurn");
+            .expect("[StateMachine] - Fail to start the game");
     }
 
-    pub fn player_two_turn(&self) {
-        INFO!("[StateMachine] - Event : Signal player two turn");
-
-        self.sender
-            .send(MqMsg {
-                event: Event::PlayerTwoTurn,
-            })
-            .expect("Can not send the event PlayerTwoTurn");
+    pub fn wait_end_game(self) {
+        self.handler
+            .join()
+            .expect("[StateMachine] Error when joining the thread");
     }
 }
 
@@ -105,7 +87,6 @@ enum Event {
     EndGame,
     PlayerOneTurn,
     PlayerTwoTurn,
-    //Error,
     Quit,
 }
 
@@ -204,12 +185,27 @@ fn action_next_turn(
 ) {
     INFO!("[StateMachine] - Action : Next Turn");
     _p_grid.toggle_player();
-    _p_screen.send(screen::MqScreen::Message {
-        msg: String::from("Next Turn"),
-    });
+    _p_screen.send_msg("Next Turn");
     _p_screen.send(screen::MqScreen::CurrentGrid {
         grid: _p_grid.clone(),
-    })
+    });
+
+    match _p_grid.current_player() {
+        common::Player::PlayerOne => {
+            _p_sender
+                .send(MqMsg {
+                    event: Event::PlayerOneTurn,
+                })
+                .expect("[StateMachine] - Error : Error occur when sending Event::PlayerOneTurn");
+        }
+        common::Player::PlayerTwo => {
+            _p_sender
+                .send(MqMsg {
+                    event: Event::PlayerTwoTurn,
+                })
+                .expect("[StateMachine] - Error : Error occur when sending Event::PlayerTwoTurn");
+        }
+    }
 }
 
 fn action_end_turn(
@@ -239,9 +235,7 @@ fn action_player_one(
     _p_grid: &mut game::Grid,
 ) {
     INFO!("[StateMachine] - Action : Player one is playing");
-    _p_screen.send(screen::MqScreen::Message {
-        msg: String::from("Player one it is your turn"),
-    });
+    _p_screen.send_msg("Player one it is your turn");
     game::player_turn(_p_grid);
     _p_sender
         .send(MqMsg {
@@ -256,9 +250,7 @@ fn action_player_two(
     _p_grid: &mut game::Grid,
 ) {
     INFO!("[StateMachine] - Action : Player two is playing");
-    _p_screen.send(screen::MqScreen::Message {
-        msg: String::from("Player two it is your turn"),
-    });
+    _p_screen.send_msg("Player two it is your turn");
     game::player_turn(_p_grid);
     _p_sender
         .send(MqMsg {
@@ -331,9 +323,11 @@ impl GameWrapper {
 
 fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
     INFO!("[StateMachine] Start the state machine");
+
     let mut l_current_state: GameWrapper = GameWrapper::new();
-    let mut l_grid: game::Grid = game::Grid::new(get_integer());
     let l_screen = screen::Screen::new_and_start();
+    let mut l_grid: game::Grid = game::create_grid(&l_screen);
+
     loop {
         l_screen.send(screen::MqScreen::CurrentGrid {
             grid: l_grid.clone(),
@@ -353,19 +347,4 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
         };
     }
     l_screen.stop_and_free();
-}
-
-fn get_integer() -> usize{
-    loop {
-        println!("Enter the size of the grid you want: ");
-        let l_grid_size = &*game::read_keyboard();
-
-        let size_in: u16 = match l_grid_size.trim().parse::<u16>(){
-            Ok(as_int) => as_int,
-            Err(_) => continue,
-        };
-
-        let size_in: usize = size_in as usize;
-        return size_in;
-    }
 }

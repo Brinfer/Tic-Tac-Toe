@@ -4,7 +4,7 @@
 //! Pierre-Louis GAUTIER
 //! Damien FRISSANT
 
-use crate::{common, DEBUG, TRACE};
+use crate::{common, screen, DEBUG, TRACE};
 use std::fmt;
 use std::io::stdin;
 
@@ -38,14 +38,6 @@ impl Grid {
     pub fn len(&self) -> usize {
         self.grid[0].len()
     }
-/* 
-    pub fn get_column(&self, p_x: usize) -> Vec<String> {
-        self.grid[p_x].clone()
-    }
-
-    pub fn get_cell(&self, p_x: usize, p_y: usize) -> String {
-        self.grid[p_x][p_y].to_string()
-    } */
 
     pub fn set_cell(&mut self, p_x: usize, p_y: usize, p_value: &String) -> bool {
         DEBUG!("Row to change {}", p_x);
@@ -63,18 +55,8 @@ impl Grid {
         }
     }
 
-    fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
-        DEBUG!(
-            "Is already taken by opponent ? {}",
-            self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
-        );
-        DEBUG!(
-            "Is already taken by player ? {}",
-            self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string()
-        );
-
-        !(self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
-            || self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string())
+    pub fn current_player(&self) -> common::Player {
+        self.current_player
     }
 
     pub fn toggle_player(&mut self) {
@@ -89,6 +71,21 @@ impl Grid {
             common::Player::PlayerOne => common::PLAYER_SYMBOL,
             common::Player::PlayerTwo => common::OPPONENT_SYMBOL,
         }
+    }
+
+
+    fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
+        DEBUG!(
+            "Is already taken by opponent ? {}",
+            self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
+        );
+        DEBUG!(
+            "Is already taken by player ? {}",
+            self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string()
+        );
+
+        !(self.grid[p_x][p_y] == common::OPPONENT_SYMBOL.to_string()
+            || self.grid[p_x][p_y] == common::PLAYER_SYMBOL.to_string())
     }
 }
 
@@ -107,6 +104,26 @@ impl fmt::Display for Grid {
     }
 }
 
+pub fn create_grid(p_screen: &screen::Screen) -> Grid {
+    p_screen.send_msg("Enter the size of the grid you want: ");
+
+    let l_grid_returned: Grid;
+
+    loop {
+        match read_keyboard().trim().parse::<usize>() {
+            Ok(l_value) => {
+                l_grid_returned = Grid::new(l_value);
+                break;
+            }
+            Err(_) => {
+                p_screen.send_msg("Bad entry, please retry");
+            }
+        }
+    }
+
+    l_grid_returned
+}
+
 pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) -> bool {
     let p_x: usize = (p_cell as usize) / p_grid.len();
     let p_y: usize = (p_cell as usize) % p_grid.len();
@@ -119,12 +136,11 @@ pub fn is_over(p_grid: &Grid) -> bool {
 }
 
 pub fn player_turn(p_grid: &mut Grid) {
-    let mut is_valid: bool = false;
-    while is_valid == false {
+    loop {
         match read_keyboard().parse() {
             Ok(l_cell) => {
                 if change_cell(p_grid, l_cell, &String::from(p_grid.current_symbole())) {
-                    is_valid = true;
+                    break;
                 } else {
                     println!("Bad entry, the cell is already taken or out of range");
                 }

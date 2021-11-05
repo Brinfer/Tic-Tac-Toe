@@ -51,15 +51,23 @@ impl Screen {
         INFO!("[Screen] Event : Destroy the Screen");
     }
 
-    pub fn send(&self, p_message: MqScreen){
+    pub fn send(&self, p_message: MqScreen) {
         self.sender.send(p_message).expect("Can not send");
+    }
+
+    pub fn send_msg(&self, p_message: &str) {
+        self.sender
+            .send(MqScreen::Message {
+                msg: String::from(p_message),
+            })
+            .expect("Can not send");
     }
 }
 
 fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
     let mut l_current_grid: game::Grid;
     loop {
-        match p_receiver.recv().expect("Error when receving message") {
+        match p_receiver.recv().expect("[Screen] - Error when receiving message") {
             MqScreen::CurrentGrid { grid } => {
                 l_current_grid = grid;
                 println!("{}", l_current_grid);
@@ -68,9 +76,10 @@ fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
             MqScreen::Message { msg } => {
                 println!("{}", msg);
             }
-            MqScreen::Quit => { 
+            MqScreen::Quit => {
                 println!("QUIT");
-                break;}
+                break;
+            }
         }
     }
 }
@@ -80,4 +89,3 @@ fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
 //                                              Private
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
