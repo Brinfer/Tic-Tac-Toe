@@ -158,17 +158,13 @@ pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn test_winner(p_grid: &Vec<Vec<String>>) -> bool {
-    //TODO optimize the "winner" variable
-
-    let mut l_counter_row: i16 = 0;
-    let mut l_counter_column: i16 = 0;
     let mut l_counter_diagonal_lru: i16 = 0; // Left-to-Right upward Diagonal
     let mut l_counter_diagonal_lrd: i16 = 0; // Left-to-Right downward Diagonal
     let score_to_win: i16 = p_grid.len() as i16;
 
     for i in 0..p_grid.len() {
-        l_counter_column = 0;
-        l_counter_row = 0;
+        let mut l_counter_row: i16 = 0;
+        let mut l_counter_column: i16 = 0;
 
         for j in 0..p_grid[i].len() {
             // Row

@@ -318,10 +318,11 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
     let l_screen = screen::Screen::new_and_start();
     let mut l_grid: game::Grid = game::create_grid(&l_screen);
 
+    l_screen.send(screen::MqScreen::CurrentGrid {
+        grid: l_grid.clone(),
+    });
+    
     loop {
-        l_screen.send(screen::MqScreen::CurrentGrid {
-            grid: l_grid.clone(),
-        });
         let l_msg: MqMsg = p_receiver
             .recv()
             .expect("[StateMachine] Error when receiving the message in the channel");
