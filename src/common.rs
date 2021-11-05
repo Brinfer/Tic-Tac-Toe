@@ -1,8 +1,8 @@
 #[derive(Debug, Copy, Clone)]
 pub enum Player {
     PlayerOne,
-    PlayerTwo, 
+    PlayerTwo,
 }
 
-pub const OPPONENT_SYMBOL: &str = "O";
-pub const PLAYER_SYMBOL: &str = "X";
+pub const PLAYER_TWO_SYMBOL: &str = "  \x1B[31mO\x1B[0m  ";
+pub const PLAYER_ONE_SYMBOL: &str = "  \x1B[32mX\x1B[0m  ";
