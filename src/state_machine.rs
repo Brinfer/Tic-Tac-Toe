@@ -18,7 +18,7 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{game, screen, DEBUG, ERROR, INFO, TRACE, WARNING};
+use crate::{game, screen, DEBUG, INFO, TRACE, WARNING};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -51,7 +51,7 @@ impl StateMachine {
     pub fn stop_and_free(self) {
         INFO!("[StateMachine] Event : Stop the state machine");
 
-        self.sender.send(MqMsg { event: Event::Quit });
+        self.sender.send(MqMsg { event: Event::Quit }).expect("Can not send event Quit");
         self.handler
             .join()
             .expect("[StateMachine] Error when joining the thread");
@@ -66,7 +66,7 @@ impl StateMachine {
 
         self.sender.send(MqMsg {
             event: Event::PlayerOneTurn,
-        });
+        }).expect("Can not send the event PlayerOneTurn");
     }
 
     pub fn player_two_turn(&self) {
@@ -74,7 +74,7 @@ impl StateMachine {
 
         self.sender.send(MqMsg {
             event: Event::PlayerTwoTurn,
-        });
+        }).expect("Can not send the event PlayerTwoTurn");
     }
 }
 
@@ -99,7 +99,7 @@ enum Event {
     EndGame,
     PlayerOneTurn,
     PlayerTwoTurn,
-    Error,
+    //Error,
     Quit,
 }
 
@@ -109,7 +109,7 @@ enum GameWrapper {
     PlayerTwoTurn(Game<PlayerTwoTurn>),
     TestGameStatus(Game<TestGameStatus>),
     TestPlayerTurn(Game<TestPlayerTurn>),
-    Quit(Game<Quit>),
+    //Quit(Game<Quit>),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -211,11 +211,11 @@ fn action_end_turn(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_gri
         // There is a winner
         _p_sender.send(MqMsg {
             event: Event::EndGame,
-        });
+        }).expect("Can not send the event EndGame");
     } else {
         _p_sender.send(MqMsg {
             event: Event::NextTurn,
-        });
+        }).expect("Can not send the event NextTurn");
     }
 }
 
@@ -229,7 +229,9 @@ fn action_player_one(
         msg: String::from("Player one it is your turn"),
     });
     game::player_turn(_p_grid);
-
+    _p_sender.send(MqMsg {
+        event: Event::EndTurn,
+    }).expect("Can not send event endTurn");
     // TODO capture keyboard, set gird
 }
 
@@ -243,6 +245,9 @@ fn action_player_two(
         msg: String::from("Player two it is your turn"),
     });
     game::player_turn(_p_grid);
+    _p_sender.send(MqMsg {
+        event: Event::EndTurn,
+    }).expect("Can not send event endTurn");
 
     // TODO capture keyboard, set grid
 }
@@ -257,20 +262,20 @@ impl Game<TestPlayerTurn> {
     }
 }
 
-impl Game<Quit> {
+/* impl Game<Quit> {
     pub fn quit() -> Self {
         Game { state: Quit {} }
     }
-}
+} */
 
 impl GameWrapper {
     pub fn new() -> Self {
         GameWrapper::TestPlayerTurn(Game::new())
     }
 
-    pub fn quit() -> Self {
+/*     pub fn quit() -> Self {
         GameWrapper::Quit(Game::quit())
-    }
+    } */
 
     pub fn step(
         &self,
@@ -301,10 +306,6 @@ impl GameWrapper {
                 action_player_two,
             )),
             (_, Event::Quit) => Ok((*self, action_quit)),
-            (_, Event::Error) => {
-                ERROR!("[StateMachine] Transition : An error occur");
-                Err(())
-            }
             (_, _) => {
                 WARNING!("[StateMachine] - Transition : From ... to ... >> Unsupported transition");
                 Ok((*self, action_none))
@@ -315,11 +316,12 @@ impl GameWrapper {
 
 fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
     INFO!("[StateMachine] Start the state machine");
-
+    
     let mut l_current_state: GameWrapper = GameWrapper::new();
     let mut l_grid: game::Grid = game::Grid::new();
     let l_screen = screen::Screen::new_and_start();
-    loop {
+    loop { 
+        l_screen.send(screen::MqScreen::CurrentGrid{grid: l_grid.clone()});
         let l_msg: MqMsg = p_receiver
             .recv()
             .expect("[StateMachine] Error when receiving the message in the channel");

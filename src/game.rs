@@ -38,14 +38,14 @@ impl Grid {
     pub fn len(&self) -> usize {
         self.grid[0].len()
     }
-
+/* 
     pub fn get_column(&self, p_x: usize) -> Vec<String> {
         self.grid[p_x].clone()
     }
 
     pub fn get_cell(&self, p_x: usize, p_y: usize) -> String {
         self.grid[p_x][p_y].to_string()
-    }
+    } */
 
     pub fn set_cell(&mut self, p_x: usize, p_y: usize, p_value: &String) -> bool {
         DEBUG!("Row to change {}", p_x);

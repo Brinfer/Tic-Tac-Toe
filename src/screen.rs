@@ -4,8 +4,7 @@
 //! Pierre-Louis GAUTIER
 
 use crate::game;
-use crate::{DEBUG, ERROR, INFO, TRACE, WARNING};
-use std::io::stdin;
+use crate::{INFO, TRACE};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -55,13 +54,6 @@ impl Screen {
     pub fn send(&self, p_message: MqScreen){
         self.sender.send(p_message).expect("Can not send");
     }
-}
-
-pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
-    println!("{}", p_grid);
-    println!("Enter the number of the box you wish to fill in");
-    let mut is_valid: bool = false;
-    
 }
 
 fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
