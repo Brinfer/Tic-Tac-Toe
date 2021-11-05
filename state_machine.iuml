@@ -11,17 +11,17 @@ state "Playing" as connected {
     state "PlayerTwoTurn" as playing
     state "PlayerOneTurn" as wainting_for_opponent
 
-    [*] -down-> choice_for_game_status : / start_game()
+    [*] -down-> choice_for_player : / start_game()
 
-    choice_for_game_status -right-> [*] : test == GameEnded
-    choice_for_game_status -down-> choice_for_player : test != GameEnded /\ntest = is_my_turn()
+    choice_for_game_status -down-> [*] : test == GameEnded
+    choice_for_game_status -up-> choice_for_player : test != GameEnded /\ntest = is_my_turn()
 
     choice_for_player -right-> playing : test == true
-    choice_for_player -down-> wainting_for_opponent : test == false
+    choice_for_player -left-> wainting_for_opponent : test == false
 
-    playing -up-> choice_for_game_status : EndTurn / refresh_screen();\n test = eval_game_statue();
+    playing --> choice_for_game_status : EndTurn / refresh_screen();\n test = eval_game_statue();
 
-    wainting_for_opponent -up-> choice_for_game_status : EndTurn / refresh_screen();\n test = eval_game_statue();
+    wainting_for_opponent --> choice_for_game_status : EndTurn / refresh_screen();\n test = eval_game_statue();
 
     ||
 
