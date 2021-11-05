@@ -20,12 +20,12 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn new() -> Self {
-        let mut l_grid = vec![vec![0.to_string(); 4]; 4];
+    pub fn new(p_size: usize) -> Self {
+        let mut l_grid = vec![vec![0.to_string(); p_size]; p_size];
 
         for i in 0..l_grid.len() {
             for j in 0..l_grid[i].len() {
-                l_grid[i][j] = ((4 * i) + j).to_string();
+                l_grid[i][j] = ((p_size * i) + j).to_string();
             }
         }
 
@@ -208,7 +208,7 @@ fn test_winner(p_grid: &Vec<Vec<String>>) -> bool {
     return winner;
 }
 
-fn read_keyboard() -> String {
+pub fn read_keyboard() -> String {
     let mut buf = String::new();
     stdin()
         .read_line(&mut buf)

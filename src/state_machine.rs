@@ -51,7 +51,9 @@ impl StateMachine {
     pub fn stop_and_free(self) {
         INFO!("[StateMachine] Event : Stop the state machine");
 
-        self.sender.send(MqMsg { event: Event::Quit }).expect("Can not send event Quit");
+        self.sender
+            .send(MqMsg { event: Event::Quit })
+            .expect("Can not send event Quit");
         self.handler
             .join()
             .expect("[StateMachine] Error when joining the thread");
@@ -64,17 +66,21 @@ impl StateMachine {
     pub fn player_one_turn(&self) {
         INFO!("[StateMachine] - Event : Signal player one turn");
 
-        self.sender.send(MqMsg {
-            event: Event::PlayerOneTurn,
-        }).expect("Can not send the event PlayerOneTurn");
+        self.sender
+            .send(MqMsg {
+                event: Event::PlayerOneTurn,
+            })
+            .expect("Can not send the event PlayerOneTurn");
     }
 
     pub fn player_two_turn(&self) {
         INFO!("[StateMachine] - Event : Signal player two turn");
 
-        self.sender.send(MqMsg {
-            event: Event::PlayerTwoTurn,
-        }).expect("Can not send the event PlayerTwoTurn");
+        self.sender
+            .send(MqMsg {
+                event: Event::PlayerTwoTurn,
+            })
+            .expect("Can not send the event PlayerTwoTurn");
     }
 }
 
@@ -201,19 +207,29 @@ fn action_next_turn(
     _p_screen.send(screen::MqScreen::Message {
         msg: String::from("Next Turn"),
     });
-    _p_screen.send(screen::MqScreen::CurrentGrid { grid: _p_grid.clone() })
+    _p_screen.send(screen::MqScreen::CurrentGrid {
+        grid: _p_grid.clone(),
+    })
 }
 
-fn action_end_turn(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
+fn action_end_turn(
+    _p_sender: &Sender<MqMsg>,
+    _p_screen: &screen::Screen,
+    _p_grid: &mut game::Grid,
+) {
     INFO!("[StateMachine] - Action : End Turn");
     if game::is_over(&_p_grid) {
-        _p_sender.send(MqMsg {
-            event: Event::EndGame,
-        }).expect("Can not send the event EndGame");
+        _p_sender
+            .send(MqMsg {
+                event: Event::EndGame,
+            })
+            .expect("Can not send the event EndGame");
     } else {
-        _p_sender.send(MqMsg {
-            event: Event::NextTurn,
-        }).expect("Can not send the event NextTurn");
+        _p_sender
+            .send(MqMsg {
+                event: Event::NextTurn,
+            })
+            .expect("Can not send the event NextTurn");
     }
 }
 
@@ -227,9 +243,11 @@ fn action_player_one(
         msg: String::from("Player one it is your turn"),
     });
     game::player_turn(_p_grid);
-    _p_sender.send(MqMsg {
-        event: Event::EndTurn,
-    }).expect("Can not send event endTurn");
+    _p_sender
+        .send(MqMsg {
+            event: Event::EndTurn,
+        })
+        .expect("Can not send event endTurn");
 }
 
 fn action_player_two(
@@ -242,10 +260,11 @@ fn action_player_two(
         msg: String::from("Player two it is your turn"),
     });
     game::player_turn(_p_grid);
-    _p_sender.send(MqMsg {
-        event: Event::EndTurn,
-    }).expect("Can not send event endTurn");
-
+    _p_sender
+        .send(MqMsg {
+            event: Event::EndTurn,
+        })
+        .expect("Can not send event endTurn");
 }
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
@@ -269,7 +288,7 @@ impl GameWrapper {
         GameWrapper::TestPlayerTurn(Game::new())
     }
 
-/*     pub fn quit() -> Self {
+    /*     pub fn quit() -> Self {
         GameWrapper::Quit(Game::quit())
     } */
 
@@ -312,12 +331,13 @@ impl GameWrapper {
 
 fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
     INFO!("[StateMachine] Start the state machine");
-    
     let mut l_current_state: GameWrapper = GameWrapper::new();
-    let mut l_grid: game::Grid = game::Grid::new();
+    let mut l_grid: game::Grid = game::Grid::new(get_integer());
     let l_screen = screen::Screen::new_and_start();
-    loop { 
-        l_screen.send(screen::MqScreen::CurrentGrid{grid: l_grid.clone()});
+    loop {
+        l_screen.send(screen::MqScreen::CurrentGrid {
+            grid: l_grid.clone(),
+        });
         let l_msg: MqMsg = p_receiver
             .recv()
             .expect("[StateMachine] Error when receiving the message in the channel");
@@ -333,4 +353,19 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
         };
     }
     l_screen.stop_and_free();
+}
+
+fn get_integer() -> usize{
+    loop {
+        println!("Enter the size of the grid you want: ");
+        let l_grid_size = &*game::read_keyboard();
+
+        let size_in: u16 = match l_grid_size.trim().parse::<u16>(){
+            Ok(as_int) => as_int,
+            Err(_) => continue,
+        };
+
+        let size_in: usize = size_in as usize;
+        return size_in;
+    }
 }
