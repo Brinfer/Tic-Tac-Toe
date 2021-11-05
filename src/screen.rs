@@ -43,7 +43,7 @@ impl Screen {
     pub fn stop_and_free(self) {
         INFO!("[Screen] Event : Stop the state machine");
 
-        self.sender.send(MqScreen::Quit).expect("Can not quit");
+        self.sender.send(MqScreen::Quit).expect("[Screen] Error can't send message Quit");
         self.handler
             .join()
             .expect("[Screen] Error when joining the thread");
@@ -52,7 +52,7 @@ impl Screen {
     }
 
     pub fn send(&self, p_message: MqScreen) {
-        self.sender.send(p_message).expect("Can not send");
+        self.sender.send(p_message).expect("[Screen] Error can't send a message");
     }
 
     pub fn send_msg(&self, p_message: &str) {
@@ -60,7 +60,7 @@ impl Screen {
             .send(MqScreen::Message {
                 msg: String::from(p_message),
             })
-            .expect("Can not send");
+            .expect("[Screen] Error can't send a message");
     }
 }
 

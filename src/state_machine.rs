@@ -219,13 +219,13 @@ fn action_end_turn(
             .send(MqMsg {
                 event: Event::EndGame,
             })
-            .expect("Can not send the event EndGame");
+            .expect("[StateMachine] Error can not send the event EndGame");
     } else {
         _p_sender
             .send(MqMsg {
                 event: Event::NextTurn,
             })
-            .expect("Can not send the event NextTurn");
+            .expect("[StateMachine] Error can not send the event NextTurn");
     }
 }
 
@@ -236,12 +236,12 @@ fn action_player_one(
 ) {
     INFO!("[StateMachine] - Action : Player one is playing");
     _p_screen.send_msg("Player one it is your turn");
-    game::player_turn(_p_grid);
+    game::player_turn(_p_screen, _p_grid);
     _p_sender
         .send(MqMsg {
             event: Event::EndTurn,
         })
-        .expect("Can not send event endTurn");
+        .expect("[StateMachine] Error can not send event endTurn");
 }
 
 fn action_player_two(
@@ -251,12 +251,12 @@ fn action_player_two(
 ) {
     INFO!("[StateMachine] - Action : Player two is playing");
     _p_screen.send_msg("Player two it is your turn");
-    game::player_turn(_p_grid);
+    game::player_turn(_p_screen, _p_grid);
     _p_sender
         .send(MqMsg {
             event: Event::EndTurn,
         })
-        .expect("Can not send event endTurn");
+        .expect("[StateMachine] Error can not send event endTurn");
 }
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
@@ -269,20 +269,10 @@ impl Game<TestPlayerTurn> {
     }
 }
 
-/* impl Game<Quit> {
-    pub fn quit() -> Self {
-        Game { state: Quit {} }
-    }
-} */
-
 impl GameWrapper {
     pub fn new() -> Self {
         GameWrapper::TestPlayerTurn(Game::new())
     }
-
-    /*     pub fn quit() -> Self {
-        GameWrapper::Quit(Game::quit())
-    } */
 
     pub fn step(
         &self,

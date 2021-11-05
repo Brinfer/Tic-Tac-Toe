@@ -135,18 +135,18 @@ pub fn is_over(p_grid: &Grid) -> bool {
     test_winner(&p_grid.grid)
 }
 
-pub fn player_turn(p_grid: &mut Grid) {
+pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) {
     loop {
         match read_keyboard().parse() {
             Ok(l_cell) => {
                 if change_cell(p_grid, l_cell, &String::from(p_grid.current_symbole())) {
                     break;
                 } else {
-                    println!("Bad entry, the cell is already taken or out of range");
+                    p_screen.send_msg("Bad entry, the cell is already taken or out of range");
                 }
             }
             Err(_) => {
-                println!("Bad entry, please retry");
+                p_screen.send_msg("Bad entry, please retry");
             }
         }
     }
