@@ -6,18 +6,25 @@
 use crate::common;
 use crate::game;
 use std::io::stdin;
-
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Public
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+pub fn displayer() {
+    let (send, recv): (Sender<common::Event>, Receiver<common::Event>) = mpsc::channel();
+    let l_grid: game::Grid;
+    let l_player: common::CurrentPlayer;
+    thread::spawn(move || handle_display());
+}
+
 pub fn display_role_selection_screen() -> common::PlayerRole {
     println!("Choose your role by entering one of the following role (press \x1B[1mq\x1B[22m to quit):\n\x1B[94m1 : Host\n2 : Guest\x1B[0m");
-
     let mut answer: common::PlayerRole = common::PlayerRole::UNKNOWN;
-
     while answer == common::PlayerRole::UNKNOWN {
         match &*read_keyboard() {
             "1" => {
@@ -41,12 +48,9 @@ pub fn display_role_selection_screen() -> common::PlayerRole {
 }
 
 pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
-
     println!("{}", p_grid);
     println!("Enter the number of the box you wish to fill in");
-
     let mut is_valid: bool = false;
-
     while is_valid == false {
         match read_keyboard().parse() {
             Ok(l_cell) => {
@@ -63,6 +67,24 @@ pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
     }
 }
 
+pub fn handle_display() {
+    let (send, recv): (Sender<common::Event>, Receiver<common::Event>) = mpsc::channel();
+    // let l_game_is_over : common::GameIsOver = common::GameIsOver{
+    //     gameStatus : false,
+    // };
+    //while !l_game_is_over.gameStatus{
+    match recv.recv().expect("Error when receving message") {
+        common::Event::CurrentGrid { grid } => {
+            println!("{}", grid);
+        }
+
+        common::Event::Message { msg } => {
+            //Not implemented yet
+        }
+    }
+    //}
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Private
@@ -71,7 +93,6 @@ pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
 
 fn read_keyboard() -> String {
     let mut buf = String::new();
-
     stdin()
         .read_line(&mut buf)
         .expect("\x1B[31mCouldn't read line\x1B[0m");
