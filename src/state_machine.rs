@@ -18,7 +18,7 @@
 //! # Author
 //! Pierre-Louis GAUTIER
 
-use crate::{DEBUG, ERROR, INFO, TRACE, WARNING};
+use crate::{screen, DEBUG, ERROR, INFO, TRACE, WARNING};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -181,22 +181,23 @@ impl From<&Game<TestPlayerTurn>> for Game<PlayerTwoTurn> {
 
 //////////////////////////////////////////// Actions //////////////////////////////////////////////////////////////////
 
-fn action_none(_p_sender: &Sender<MqMsg>) {
+fn action_none(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen) {
     INFO!("[StateMachine] - Action : None");
     // Nothing to do
 }
 
-fn action_quit(_p_sender: &Sender<MqMsg>) {
+fn action_quit(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen) {
     INFO!("[StateMachine] - Action : Quit");
+   _p_screen.send(screen::MqScreen::Message{msg :String::from("QUIT")});
     // TODO
 }
 
-fn action_next_turn(_p_sender: &Sender<MqMsg>) {
+fn action_next_turn(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen) {
     INFO!("[StateMachine] - Action : Next Turn");
     // TODO
 }
 
-fn action_end_turn(_p_sender: &Sender<MqMsg>) {
+fn action_end_turn(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen) {
     INFO!("[StateMachine] - Action : End Turn");
     // TODO Test winner
 
@@ -206,17 +207,16 @@ fn action_end_turn(_p_sender: &Sender<MqMsg>) {
     });
 }
 
-fn action_player_one(_p_sender: &Sender<MqMsg>) {
+fn action_player_one(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen) {
     INFO!("[StateMachine] - Action : Player one is playing");
 
     // TODO capture keyboard, set gird
 }
 
-fn action_player_two(_p_sender: &Sender<MqMsg>) {
+fn action_player_two(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen) {
     INFO!("[StateMachine] - Action : Player two is playing");
 
     // TODO capture keyboard, set grid
-
 }
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
@@ -244,7 +244,7 @@ impl GameWrapper {
         GameWrapper::Quit(Game::quit())
     }
 
-    pub fn step(&self, event: &Event) -> Result<(Self, fn(&Sender<MqMsg>)), ()> {
+    pub fn step(&self, event: &Event) -> Result<(Self, fn(&Sender<MqMsg>, &screen::Screen)), ()> {
         match (self, event) {
             (GameWrapper::PlayerOneTurn(_previous_state), Event::EndTurn) => Ok((
                 GameWrapper::TestGameStatus(_previous_state.into()),
@@ -287,7 +287,7 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
     // let mut l_grid: game::Grid = game::Grid::new();
-
+    let l_screen = screen::Screen::new_and_start();
     loop {
         let l_msg: MqMsg = p_receiver
             .recv()
@@ -295,7 +295,7 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
 
         l_current_state = match l_current_state.step(&l_msg.event) {
             Ok((l_new_state, l_callback)) => {
-                l_callback(p_sender);
+                l_callback(p_sender, &l_screen);
                 l_new_state
             }
             Err(_) => {
@@ -303,4 +303,5 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
             }
         };
     }
+    l_screen.stop_and_free();
 }

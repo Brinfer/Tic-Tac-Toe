@@ -23,14 +23,3 @@ pub struct GameIsOver{
     pub gameStatus: bool,
 }
 
-pub enum Event {
-    // Request{
-    //     rqt: String,
-    // },
-    Message {
-        msg: String,
-    },
-    CurrentGrid{
-        grid : game::Grid,
-    },
-}

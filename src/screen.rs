@@ -5,46 +5,57 @@
 
 use crate::common;
 use crate::game;
+use crate::{DEBUG, ERROR, INFO, TRACE, WARNING};
 use std::io::stdin;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //                                              Public
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn displayer() {
-    let (send, recv): (Sender<common::Event>, Receiver<common::Event>) = mpsc::channel();
-    let l_grid: game::Grid;
-    let l_player: common::CurrentPlayer;
-    thread::spawn(move || handle_display());
+pub enum MqScreen {
+    Message { msg: String },
+    CurrentGrid { grid: game::Grid },
+    Quit,
 }
 
-pub fn display_role_selection_screen() -> common::PlayerRole {
-    println!("Choose your role by entering one of the following role (press \x1B[1mq\x1B[22m to quit):\n\x1B[94m1 : Host\n2 : Guest\x1B[0m");
-    let mut answer: common::PlayerRole = common::PlayerRole::UNKNOWN;
-    while answer == common::PlayerRole::UNKNOWN {
-        match &*read_keyboard() {
-            "1" => {
-                println!("\x1B[32mYou are the host\x1B[0m");
-                answer = common::PlayerRole::HOST;
-            }
-            "2" => {
-                println!("\x1B[32mYou are the guest\x1B[0m");
-                answer = common::PlayerRole::GUEST;
-            }
-            "q" => {
-                println!("\x1B[32mYou choose to quit the game.\x1B[0m");
-                break;
-            }
-            line => {
-                println!("\x1B[33mError the entered value \x1B[1m{}\x1B[22m is out of the possibility field, please try again.\x1B[0m",line);
-            }
+pub struct Screen {
+    sender: Sender<MqScreen>,
+    handler: thread::JoinHandle<()>,
+}
+
+impl Screen {
+    pub fn new_and_start() -> Self {
+        INFO!("[Screen] Event : Create the Screen");
+
+        let (l_sender, l_receiver): (Sender<MqScreen>, Receiver<MqScreen>) = mpsc::channel();
+        let l_sender_copy: Sender<MqScreen> = l_sender.clone();
+        Self {
+            sender: l_sender,
+            handler: thread::spawn(move || {
+                run(&l_sender_copy, &l_receiver);
+            }),
         }
     }
-    return answer;
+
+    pub fn stop_and_free(self) {
+        INFO!("[Screen] Event : Stop the state machine");
+
+        self.sender.send(MqScreen::Quit).expect("Can not quit");
+        self.handler
+            .join()
+            .expect("[Screen] Error when joining the thread");
+
+        INFO!("[Screen] Event : Destroy the Screen");
+    }
+
+    pub fn send(&self, p_message: MqScreen){
+        self.sender.send(p_message).expect("Can not send");
+    }
 }
 
 pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
@@ -67,22 +78,21 @@ pub fn write_in_grid(p_grid: &mut game::Grid, p_value: &String) {
     }
 }
 
-pub fn handle_display() {
-    let (send, recv): (Sender<common::Event>, Receiver<common::Event>) = mpsc::channel();
-    // let l_game_is_over : common::GameIsOver = common::GameIsOver{
-    //     gameStatus : false,
-    // };
-    //while !l_game_is_over.gameStatus{
-    match recv.recv().expect("Error when receving message") {
-        common::Event::CurrentGrid { grid } => {
-            println!("{}", grid);
-        }
+fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
+    let mut l_current_grid: game::Grid;
+    loop {
+        match p_receiver.recv().expect("Error when receving message") {
+            MqScreen::CurrentGrid { grid } => {
+                l_current_grid = grid;
+                println!("{}", l_current_grid);
+            }
 
-        common::Event::Message { msg } => {
-            //Not implemented yet
+            MqScreen::Message { msg } => {
+                println!("{}", msg);
+            }
+            MqScreen::Quit => { break;}
         }
     }
-    //}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
