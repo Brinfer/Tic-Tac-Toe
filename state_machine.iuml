@@ -1,44 +1,35 @@
 @startuml StateMachine
 
-state "SelectRole" as select_role
-state "WaitingForConnectionHost" as waiting_for_fonnection_host
-state "WaitingForConnectionGuest" as waiting_for_connection_guest
-state fusionStart <<choice>>
+' state "SelectRole" as select_role
+' state "WaitingForConnectionHost" as waiting_for_fonnection_host
+' state "WaitingForConnectionGuest" as waiting_for_connection_guest
+' state fusionStart <<choice>>
 
-state "Connected" as connected {
-    state "ChoiceForGameStatus" as choice_for_game_status
-    state "ChoiceForPlayer" as choice_for_player
-    state "Playing" as playing
-    state "WaintingForOpponent" as wainting_for_opponent
-    state fusion <<choice>>
+state "Playing" as connected {
+    state "ChoiceForGameStatus" as choice_for_game_status <<choice>>
+    state "ChoiceForPlayer" as choice_for_player <<choice>>
+    state "PlayerTwoTurn" as playing
+    state "PlayerOneTurn" as wainting_for_opponent
 
-    [*] --> fusion  : / start_game();
+    [*] -down-> choice_for_game_status : / start_game()
 
-    fusion --> choice_for_game_status : / refresh_screen();\n test = eval_game_statue();
+    choice_for_game_status -right-> [*] : test == GameEnded
+    choice_for_game_status -down-> choice_for_player : test != GameEnded /\ntest = is_my_turn()
 
-    choice_for_game_status --> choice_for_player : test != GameEnded /\ntest = is_my_turn()
-    choice_for_game_status --> fusionStart : test == GameEnded
+    choice_for_player -right-> playing : test == true
+    choice_for_player -down-> wainting_for_opponent : test == false
 
-    choice_for_player --> playing : test == true
-    choice_for_player --> wainting_for_opponent : test == false
+    playing -up-> choice_for_game_status : EndTurn / refresh_screen();\n test = eval_game_statue();
 
-    playing --> fusion : EndTurn
+    wainting_for_opponent -up-> choice_for_game_status : EndTurn / refresh_screen();\n test = eval_game_statue();
 
-    wainting_for_opponent --> fusion : EndTurn
+    ||
+
+    state "DisplayScreen" as display
+
+    [*] --> display
+
+    ' display --> display : NextTurn / refresh_screen()
+    display --> [*] : GameEnded
 }
-
-
-[*] --> fusionStart
-
-fusionStart --> select_role : test = display_selection_screen();
-
-select_role --> waiting_for_connection_guest : test == GUEST
-select_role --> waiting_for_fonnection_host : test == HOST
-
-waiting_for_fonnection_host --> connected : Connected
-
-waiting_for_connection_guest --> connected : Connected
-
-connected --> fusionStart : ErrorConnection
-
 @enduml

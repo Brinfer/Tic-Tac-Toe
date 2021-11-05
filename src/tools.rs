@@ -7,16 +7,18 @@
 macro_rules! TRACE {
     (type=>$tp:expr, $($arg:tt)+) => {{ TRACE!("{} >> {}", $tp, format_args!($($arg)+)); }};
     (type=>$tp:expr) => {{ TRACE!("{}", $tp); }};
-    ($($arg:tt)+) => {{ println!("{}", format_args!("{}:{} - {}", file!(), line!(), format_args!($($arg)+))); }};
+    ($($arg:tt)+) => {{
+        #[cfg(debug_assertions)]
+        println!("{}", format_args!("{}:{} - {}", file!(), line!(), format_args!($($arg)+)));
+        #[cfg(not(debug_assertions))]
+        {} // TODO write in FILE
+}};
 }
 
 #[macro_export]
 macro_rules! DEBUG {
     ($($msg:expr),+) => {
-        #[cfg(debug_assertions)]
         { TRACE!(type => "DEBUG", $($msg),+); }
-        #[cfg(not(debug_assertions))]
-            {}
     };
 }
 
@@ -34,5 +36,3 @@ macro_rules! WARNING {
 macro_rules! ERROR {
     ($($msg:expr),+) => {{ TRACE!(type => "ERROR", $($msg),+); }};
 }
-
-// TODO write log in file ?
