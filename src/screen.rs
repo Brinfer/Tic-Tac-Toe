@@ -1,7 +1,7 @@
-//! TODO
 //!
 //! # Author
 //! Pierre-Louis GAUTIER
+//! Damien FRISSANT
 
 use crate::game;
 use crate::{INFO, TRACE};
@@ -15,6 +15,9 @@ use std::thread;
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+///Enum of the screen
+/// The enum allow us the manage the channel without a communication protocol
+/// See the function "run"
 pub enum MqScreen {
     Message { msg: String },
     CurrentGrid { grid: game::Grid },
