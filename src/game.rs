@@ -73,7 +73,6 @@ impl Grid {
         }
     }
 
-
     fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
         DEBUG!(
             "Is already taken by opponent ? {}",
@@ -160,68 +159,72 @@ pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) {
 
 fn test_winner(p_grid: &Vec<Vec<String>>) -> bool {
     //TODO optimize the "winner" variable
-    let mut l_counter: i8 = 0;
-    let mut winner = false;
-    // Test in the row
+
+    let mut l_counter_row: i16 = 0;
+    let mut l_counter_column: i16 = 0;
+    let mut l_counter_diagonal_lru: i16 = 0; // Left-to-Right upward Diagonal
+    let mut l_counter_diagonal_lrd: i16 = 0; // Left-to-Right downward Diagonal
+    let score_to_win: i16 = p_grid.len() as i16;
+
     for i in 0..p_grid.len() {
+        l_counter_column = 0;
+        l_counter_row = 0;
+
         for j in 0..p_grid[i].len() {
+            // Row
             if p_grid[i][j] == common::PLAYER_TWO_SYMBOL {
-                l_counter -= 1;
+                l_counter_row -= 1;
             } else if p_grid[i][j] == common::PLAYER_ONE_SYMBOL {
-                l_counter += 1;
+                l_counter_row += 1;
+            }
+
+            // Column
+            if p_grid[j][i] == common::PLAYER_TWO_SYMBOL {
+                l_counter_column -= 1;
+            } else if p_grid[j][i] == common::PLAYER_ONE_SYMBOL {
+                l_counter_column += 1;
             }
         }
-    }
 
-    if (l_counter >= 3) || (l_counter <= -3) {
-        winner = true;
-    }
+        DEBUG!("[Game] Score row {}", l_counter_row);
+        DEBUG!("[Game] Score column {}", l_counter_column);
 
-    // Test in the column
-    for i in 0..p_grid.len() {
-        l_counter = 0;
-        for j in 0..p_grid[i].len() {
-            if p_grid[i][j] == common::PLAYER_TWO_SYMBOL {
-                l_counter -= 1;
-            } else if p_grid[i][j] == common::PLAYER_ONE_SYMBOL {
-                l_counter += 1;
-            }
+        if l_counter_row >= score_to_win
+            || l_counter_row <= -score_to_win
+            || l_counter_column >= score_to_win
+            || l_counter_column <= -score_to_win
+        {
+            return true;
         }
-        if (l_counter >= 3) || (l_counter <= -3) {
-            winner = true;
-        }
-    }
 
-    l_counter = 0;
-
-    // Check Left-to-Right downward Diagonal:
-    for i in 0..p_grid.len() {
+        // Left-to-Right upward Diagonal
         if p_grid[i][i] == common::PLAYER_TWO_SYMBOL {
-            l_counter -= 1;
+            l_counter_diagonal_lru -= 1;
         } else if p_grid[i][i] == common::PLAYER_ONE_SYMBOL {
-            l_counter += 1;
+            l_counter_diagonal_lru += 1;
         }
-    }
 
-    if (l_counter >= 3) || (l_counter <= -3) {
-        winner = true;
-    }
-    // TODO Rationalize
-
-    // Check Left-to-Right upward Diagonal
-    l_counter = 0;
-    for i in 0..p_grid.len() {
+        // Check Left-to-Right upward Diagonal
         if p_grid[i][(p_grid[i].len() - 1) - i] == common::PLAYER_TWO_SYMBOL {
-            l_counter -= 1;
+            l_counter_diagonal_lrd -= 1;
         } else if p_grid[i][(p_grid[i].len() - 1) - i] == common::PLAYER_ONE_SYMBOL {
-            l_counter += 1;
+            l_counter_diagonal_lrd += 1;
         }
     }
 
-    if (l_counter >= 3) || (l_counter <= -3) {
-        winner = true;
-    }
-    return winner;
+    DEBUG!(
+        "[Game] Score left-to-tight upward diagonal {}",
+        l_counter_diagonal_lru
+    );
+    DEBUG!(
+        "[Game] Score left-to-right downward diagonal {}",
+        l_counter_diagonal_lrd
+    );
+
+    return l_counter_diagonal_lru >= score_to_win
+        || l_counter_diagonal_lru <= -score_to_win
+        || l_counter_diagonal_lrd >= score_to_win
+        || l_counter_diagonal_lrd <= -score_to_win;
 }
 
 pub fn read_keyboard() -> String {
