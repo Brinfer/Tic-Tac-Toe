@@ -146,8 +146,6 @@ pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) {
             p_screen.send(screen::MqScreen::Message{msg: String::from("Good bye !")});
             //TODO quit properly the program
             std::process::exit(0);
-            //p_screen.stop_and_free();
-            
         }
         match entered_key.parse() {
             Ok(l_cell) => {
@@ -236,7 +234,7 @@ fn test_winner(p_grid: &Vec<Vec<String>>) -> bool {
         || l_counter_diagonal_lrd <= -score_to_win;
 }
 
-pub fn read_keyboard() -> String {
+fn read_keyboard() -> String {
     let mut buf = String::new();
     stdin()
         .read_line(&mut buf)

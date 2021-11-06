@@ -87,7 +87,7 @@ enum Event {
     EndGame,
     PlayerOneTurn,
     PlayerTwoTurn,
-    Quit,
+    //Quit,
 }
 
 #[derive(Copy, Clone)]
@@ -111,9 +111,9 @@ struct TestGameStatus {}
 #[derive(Debug, Copy, Clone)]
 struct TestPlayerTurn {}
 
-#[derive(Debug, Copy, Clone)]
+/* #[derive(Debug, Copy, Clone)]
 struct Quit {}
-
+ */
 #[derive(Debug, Copy, Clone)]
 struct Game<State> {
     state: State,
@@ -175,9 +175,7 @@ fn action_none(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &
 
 fn action_quit(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
     INFO!("[StateMachine] - Action : Quit");
-    //_p_screen.send(screen::MqScreen::CurrentGrid{grid: _p_grid});
     _p_screen.send(screen::MqScreen::Quit);
-    std::process::exit(0);
 }
 
 fn action_next_turn(
@@ -217,6 +215,21 @@ fn action_end_turn(
 ) {
     INFO!("[StateMachine] - Action : End Turn");
     if game::is_over(&_p_grid) {
+        _p_screen.send(screen::MqScreen::CurrentGrid {
+            grid: _p_grid.clone(),
+        });
+
+        let winner = _p_grid.current_player();
+        if winner == common::Player::PlayerOne{
+            println!("coucou2");
+
+            _p_screen.send(screen::MqScreen::Message{msg: String::from("Player one WIN !")});
+        }
+        else{
+            println!("coucou");
+            _p_screen.send(screen::MqScreen::Message{msg: String::from("Player two WIN !")});
+        }
+        
         _p_sender
             .send(MqMsg {
                 event: Event::EndGame,
@@ -308,7 +321,7 @@ impl GameWrapper {
                 GameWrapper::PlayerTwoTurn(_previous_state.into()),
                 action_player_two,
             )),
-            (_, Event::Quit) => Ok((*self, action_quit)),
+            //(_, Event::Quit) => Ok((*self, action_quit)),
             (_, _) => {
                 WARNING!("[StateMachine] - Transition : From ... to ... >> Unsupported transition");
                 Ok((*self, action_none))
