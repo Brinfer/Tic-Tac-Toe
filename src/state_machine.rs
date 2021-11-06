@@ -175,7 +175,9 @@ fn action_none(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &
 
 fn action_quit(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
     INFO!("[StateMachine] - Action : Quit");
+    //_p_screen.send(screen::MqScreen::CurrentGrid{grid: _p_grid});
     _p_screen.send(screen::MqScreen::Quit);
+    std::process::exit(0);
 }
 
 fn action_next_turn(
@@ -235,7 +237,9 @@ fn action_player_one(
     _p_grid: &mut game::Grid,
 ) {
     INFO!("[StateMachine] - Action : Player one is playing");
-    _p_screen.send_msg("Player one it is your turn");
+    _p_screen.send_msg(
+        "\x1B[32mPlayer one it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
+    );
     game::player_turn(_p_screen, _p_grid);
     _p_sender
         .send(MqMsg {
@@ -250,7 +254,9 @@ fn action_player_two(
     _p_grid: &mut game::Grid,
 ) {
     INFO!("[StateMachine] - Action : Player two is playing");
-    _p_screen.send_msg("Player two it is your turn");
+    _p_screen.send_msg(
+        "\x1B[31mPlayer two it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
+    );
     game::player_turn(_p_screen, _p_grid);
     _p_sender
         .send(MqMsg {
@@ -321,7 +327,6 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
     l_screen.send(screen::MqScreen::CurrentGrid {
         grid: l_grid.clone(),
     });
-    
     loop {
         let l_msg: MqMsg = p_receiver
             .recv()

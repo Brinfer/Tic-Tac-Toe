@@ -5,6 +5,7 @@ mod state_machine;
 mod tools;
 
 fn main() {
+    println!("\x1B[2J\x1B[1;1H");
     INFO!("[Main] Program Started");
 
     let game_state_machine = state_machine::StateMachine::new_and_start();

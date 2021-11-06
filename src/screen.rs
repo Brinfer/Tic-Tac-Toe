@@ -73,6 +73,7 @@ fn run(p_sender: &Sender<MqScreen>, p_receiver: &Receiver<MqScreen>) {
         match p_receiver.recv().expect("[Screen] - Error when receiving message") {
             MqScreen::CurrentGrid { grid } => {
                 l_current_grid = grid;
+                println!("\x1B[2J\x1B[1;1H");
                 println!("{}", l_current_grid);
             }
 

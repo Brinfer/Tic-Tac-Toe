@@ -104,18 +104,23 @@ impl fmt::Display for Grid {
 }
 
 pub fn create_grid(p_screen: &screen::Screen) -> Grid {
-    p_screen.send_msg("Enter the size of the grid you want: ");
+    p_screen.send_msg("\x1B[34mEnter the size of the grid you want (between 3 and 9):\x1B[0m ");
 
     let l_grid_returned: Grid;
 
     loop {
         match read_keyboard().trim().parse::<usize>() {
             Ok(l_value) => {
-                l_grid_returned = Grid::new(l_value);
-                break;
+                if l_value>2 && l_value<10{
+                    l_grid_returned = Grid::new(l_value);
+                    break;
+                }
+                else{
+                    p_screen.send_msg("\x1B[41mBad entry, please enter en number greater than 2 and lower than 9. Please retry :\x1B[0m  ");
+                }
             }
             Err(_) => {
-                p_screen.send_msg("Bad entry, please retry");
+                p_screen.send_msg("\x1B[41mBad entry, please retry :\x1B[0m  ");
             }
         }
     }
@@ -136,16 +141,24 @@ pub fn is_over(p_grid: &Grid) -> bool {
 
 pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) {
     loop {
-        match read_keyboard().parse() {
+        let entered_key = read_keyboard();
+        if entered_key == "q"{
+            p_screen.send(screen::MqScreen::Message{msg: String::from("Good bye !")});
+            //TODO quit properly the program
+            std::process::exit(0);
+            //p_screen.stop_and_free();
+            
+        }
+        match entered_key.parse() {
             Ok(l_cell) => {
                 if change_cell(p_grid, l_cell, &String::from(p_grid.current_symbol())) {
                     break;
                 } else {
-                    p_screen.send_msg("Bad entry, the cell is already taken or out of range");
+                    p_screen.send_msg("\x1B[41mBad entry, the cell is already taken or out of range\x1B[0m");
                 }
             }
             Err(_) => {
-                p_screen.send_msg("Bad entry, please retry");
+                p_screen.send_msg("\x1B[41mBad entry, please retry\x1B[0m");
             }
         }
     }
