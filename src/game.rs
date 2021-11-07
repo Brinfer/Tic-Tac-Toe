@@ -1,8 +1,50 @@
-//! Module allowing all the management of the tic-tac-toe grid.
+//! Module allowing all the management of the tic-tac-toe game.
 //!
-//! # Author
-//! Pierre-Louis GAUTIER
-//! Damien FRISSANT
+//! All information about the current game is saved in a [`Game`] instance. It is then possible to have several games
+//! at the same time.
+//!
+//! # Example
+//!
+//! The `game` module is closely related to the [screen] module, but can be used independently of it.
+//! In this first example, the [screen] module is not used:
+//!
+//! ```rust
+//! mod game;
+//! mod screen;
+//!
+//! let size_grid: usize = 3; // An integer greater than 2, and less than 10, preferably
+//! let mut game = Game::new(size_grid);
+//!
+//! println!(game);
+//!
+//! while game.is_over() != true {
+//!     game.toggle_player();
+//!     game.set_cell(<x>, <y>, game.current_symbol());
+//! }
+//! ```
+//!
+//! In the second example the [screen] module is used:
+//!
+//! ```rust
+//! mod game;
+//! mod screen;
+//!
+//! let screen = screen::Screen::new_and_start();
+//! let mut l_game: game::Game = game::create_game(&screen);
+//!
+//! while game.is_over() != true {
+//!     screen.send_game(&game);
+//!
+//!     player_turn(,&screen, &game);
+//!     game.toggle_player();
+//! }
+//!
+//! screen.stop_and_free();
+//! ```
+//!
+//! # Authors
+//! - Pierre-Louis GAUTIER
+//! - Damien FRISSANT
 
 use crate::{common, screen, DEBUG, TRACE};
 use std::fmt;
@@ -13,13 +55,18 @@ use std::io::stdin;
 //                                              Public
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// The structure saving all the elements necessary for the good functioning of a game.
 #[derive(Debug, Clone)]
-pub struct Grid {
+pub struct Game {
+    /// The game of the current game
     grid: Vec<Vec<String>>,
+    /// The current player playing
     current_player: common::Player,
 }
 
-impl Grid {
+impl Game {
+    /// Create a new game
     pub fn new(p_size: usize) -> Self {
         let mut l_grid = vec![vec![0.to_string(); p_size]; p_size];
 
@@ -29,16 +76,18 @@ impl Grid {
             }
         }
 
-        Grid {
+        Game {
             grid: l_grid,
             current_player: common::Player::PlayerOne,
         }
     }
 
+    /// Return the size of the grid.
     pub fn len(&self) -> usize {
         self.grid[0].len()
     }
 
+    /// Set the value in the grid, if this cell exist and is free.
     pub fn set_cell(&mut self, p_x: usize, p_y: usize, p_value: &String) -> bool {
         DEBUG!("Row to change {}", p_x);
         DEBUG!("Column to change {}", p_y);
@@ -55,10 +104,12 @@ impl Grid {
         }
     }
 
+    /// Return the current player, see [`common::Player`]
     pub fn current_player(&self) -> common::Player {
         self.current_player
     }
 
+    /// Change the current player to the other one.
     pub fn toggle_player(&mut self) {
         self.current_player = match self.current_player {
             common::Player::PlayerOne => common::Player::PlayerTwo,
@@ -66,6 +117,7 @@ impl Grid {
         }
     }
 
+    /// Return the symbol to place in the grid of the current player, see [`common::PLAYER_ONE_SYMBOL`] and  [`common::PLAYER_TWO_SYMBOL`]
     pub fn current_symbol(&self) -> &str {
         match self.current_player {
             common::Player::PlayerOne => common::PLAYER_ONE_SYMBOL,
@@ -73,6 +125,14 @@ impl Grid {
         }
     }
 
+    /// Test if there is a winner.
+    /// Return `true` is there is a winner, `false` otherwise.
+    pub fn is_over(&self) -> bool {
+        test_winner(&self.grid)
+    }
+
+    /// Test id the cell at the given coordinate is free.
+    /// Return `true` if the cell is free, `false` otherwise
     fn cell_is_free(&self, p_x: usize, p_y: usize) -> bool {
         DEBUG!(
             "Is already taken by opponent ? {}",
@@ -88,7 +148,15 @@ impl Grid {
     }
 }
 
-impl fmt::Display for Grid {
+/// Implementation of the [`fmt::Display`] trait for a [`Game`] instance
+/// # Example
+/// ```rust
+/// let size_grid: usize = 3; // An integer greater than 2, and less than 10, preferably
+/// let mut game = Game::new(size_grid);
+///
+/// println!(game);
+/// ```
+impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut l_grid: String = format!("{}+\n", "+-----".repeat(self.grid.len()));
         for i in 0..self.grid.len() {
@@ -103,16 +171,19 @@ impl fmt::Display for Grid {
     }
 }
 
-pub fn create_grid(p_screen: &screen::Screen) -> Grid {
+/// Create a new [`Game`] associated to a [`screen::Screen`].
+///
+/// The player will be asked to enter the size of the grid.
+pub fn create_game(p_screen: &screen::Screen) -> Game {
     p_screen.send_msg("\x1B[34mEnter the size of the grid you want (between 3 and 9):\x1B[0m ");
 
-    let l_grid_returned: Grid;
+    let l_game_returned: Game;
 
     loop {
         match read_keyboard().trim().parse::<usize>() {
             Ok(l_value) => {
                 if l_value > 2 && l_value < 10 {
-                    l_grid_returned = Grid::new(l_value);
+                    l_game_returned = Game::new(l_value);
                     break;
                 } else {
                     p_screen.send_msg("\x1B[41mBad entry, please enter en number greater than 2 and lower than 9. Please retry :\x1B[0m  ");
@@ -124,21 +195,25 @@ pub fn create_grid(p_screen: &screen::Screen) -> Grid {
         }
     }
 
-    l_grid_returned
+    l_game_returned
 }
 
-pub fn change_cell(p_grid: &mut Grid, p_cell: u8, p_value: &String) -> bool {
-    let p_x: usize = (p_cell as usize) / p_grid.len();
-    let p_y: usize = (p_cell as usize) % p_grid.len();
+/// Plays the current player's turn of [`Game`] and displays the grid and information on the [`screen::Screen`].
+///
+/// Return `true` if the player has modified the grid, `false` if the player has pressed the letter `q`.
+/// As long as a valid entry has not been made, the player will be asked again to enter a value
+pub fn player_turn(p_screen: &screen::Screen, p_game: &mut Game) -> bool {
 
-    p_grid.set_cell(p_x, p_y, p_value)
-}
+    if p_game.current_player() == common::Player::PlayerOne {
+        p_screen.send_msg(
+            "\x1B[32mPlayer one it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
+        );
+    } else {
+        p_screen.send_msg(
+            "\x1B[31mPlayer two it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
+        );
+    }
 
-pub fn is_over(p_grid: &Grid) -> bool {
-    test_winner(&p_grid.grid)
-}
-
-pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) -> bool {
     loop {
         let entered_key = read_keyboard();
         if entered_key == "q" {
@@ -146,7 +221,7 @@ pub fn player_turn(p_screen: &screen::Screen, p_grid: &mut Grid) -> bool {
         } else {
             match entered_key.parse() {
                 Ok(l_cell) => {
-                    if change_cell(p_grid, l_cell, &String::from(p_grid.current_symbol())) {
+                    if change_cell(p_game, l_cell, &String::from(p_game.current_symbol())) {
                         return true;
                     } else {
                         p_screen.send_msg(
@@ -232,6 +307,13 @@ fn test_winner(p_grid: &Vec<Vec<String>>) -> bool {
         || l_counter_diagonal_lru <= -score_to_win
         || l_counter_diagonal_lrd >= score_to_win
         || l_counter_diagonal_lrd <= -score_to_win;
+}
+
+fn change_cell(p_game: &mut Game, p_cell: u8, p_value: &String) -> bool {
+    let p_x: usize = (p_cell as usize) / p_game.len();
+    let p_y: usize = (p_cell as usize) % p_game.len();
+
+    p_game.set_cell(p_x, p_y, p_value)
 }
 
 fn read_keyboard() -> String {

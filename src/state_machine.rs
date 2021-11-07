@@ -1,15 +1,18 @@
-//! The state machine allowing to make the game work.
+//! Module in charge of the execution in the right order of the game steps.
+//!
+//! An instance [`StateMachine`] is created and works in its own thread, thus allowing to have possibly several parts at the same time if
+//! one wishes to make the program evolve in that direction.
 //!
 //! # Examples
 //!
 //! ```rust
-//!     mod state_machine;
+//! mod state_machine;
 //!
-//!     let game_state_machine : state_machine::StateMachine = state_machine::new();
-//!
-//!     state_machine::ask_for_select_role(&game_state_machine);
-//!     state_machine::ask_for_connection(&game_state_machine);
+//! let game_state_machine = state_machine::StateMachine::new_and_start();
+//! game_state_machine.start_game();
+//! game_state_machine.wait_end_game();
 //! ```
+//!
 //! # Resources
 //! The state machine has been realized with the help of :
 //! - [Ana Hoverbear](https://hoverbear.org/blog/rust-state-machine-pattern/)
@@ -29,12 +32,16 @@ use std::thread;
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/// The structure saving all the elements necessary for the good functioning of the state machine
 pub struct StateMachine {
+    /// The [Sender] to the [Receiver] of the state machine
     sender: Sender<MqMsg>,
+    /// The handler of the thread running the state machine
     handler: thread::JoinHandle<()>,
 }
 
 impl StateMachine {
+    /// Create and launch the state machine, but not the game, see [`StateMachine::start_game`] to finish the game, see [`run`] to see the routine of the thread.
     pub fn new_and_start() -> Self {
         INFO!("[StateMachine] Event : Create the state machine");
 
@@ -49,6 +56,7 @@ impl StateMachine {
         }
     }
 
+    /// Send the signal to the state machine to start the game
     pub fn start_game(&self) {
         INFO!("[StateMachine] Event : Start the game");
 
@@ -59,10 +67,23 @@ impl StateMachine {
             .expect("[StateMachine] - Fail to start the game");
     }
 
+    /// The signal to the state machine to stop the game and finish its thread
+    #[allow(dead_code)]
+    pub fn finish_game(&self) {
+        INFO!("[StateMachine] Event : Finish the game");
+
+        self.sender
+            .send(MqMsg { event: Event::Quit })
+            .expect("[StateMachine] - Fail to Finish the game");
+    }
+
+    /// Block the current thread while the the thread of the state machine is not finished, see [`StateMachine::finish_game`]
     pub fn wait_end_game(self) {
         self.handler
             .join()
             .expect("[StateMachine] Error when joining the thread");
+
+        INFO!("[StateMachine] Game is finish");
     }
 }
 
@@ -90,31 +111,31 @@ enum Event {
     Quit,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum GameWrapper {
     PlayerOneTurn(Game<PlayerOneTurn>),
     PlayerTwoTurn(Game<PlayerTwoTurn>),
     TestGameStatus(Game<TestGameStatus>),
     TestPlayerTurn(Game<TestPlayerTurn>),
-    //Quit(Game<Quit>),
+    Quit(Game<Quit>),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct PlayerOneTurn {}
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct PlayerTwoTurn {}
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct TestGameStatus {}
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct TestPlayerTurn {}
 
-/* #[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct Quit {}
- */
-#[derive(Debug, Copy, Clone)]
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct Game<State> {
     state: State,
 }
@@ -168,27 +189,27 @@ impl From<&Game<TestPlayerTurn>> for Game<PlayerTwoTurn> {
 
 //////////////////////////////////////////// Actions //////////////////////////////////////////////////////////////////
 
-fn action_none(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
+fn action_none(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_game: &mut game::Game) {
     INFO!("[StateMachine] - Action : None");
     // Nothing to do
 }
 
-fn action_quit(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
+fn action_quit(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_game: &mut game::Game) {
     INFO!("[StateMachine] - Action : Quit");
-    _p_screen.send_quit();
+    // Nothing to do
 }
 
 fn action_next_turn(
     _p_sender: &Sender<MqMsg>,
     _p_screen: &screen::Screen,
-    _p_grid: &mut game::Grid,
+    _p_game: &mut game::Game,
 ) {
     INFO!("[StateMachine] - Action : Next Turn");
-    _p_grid.toggle_player();
+    _p_game.toggle_player();
     _p_screen.send_msg("Next Turn");
-    _p_screen.send_grid(_p_grid.clone());
+    _p_screen.send_game(_p_game);
 
-    match _p_grid.current_player() {
+    match _p_game.current_player() {
         common::Player::PlayerOne => {
             _p_sender
                 .send(MqMsg {
@@ -209,19 +230,16 @@ fn action_next_turn(
 fn action_end_turn(
     _p_sender: &Sender<MqMsg>,
     _p_screen: &screen::Screen,
-    _p_grid: &mut game::Grid,
+    _p_game: &mut game::Game,
 ) {
     INFO!("[StateMachine] - Action : End Turn");
-    if game::is_over(&_p_grid) {
-        _p_screen.send_grid(_p_grid.clone());
+    if _p_game.is_over() {
+        _p_screen.send_game(_p_game);
 
-        let winner = _p_grid.current_player();
+        let winner = _p_game.current_player();
         if winner == common::Player::PlayerOne {
-            println!("coucou2");
-
             _p_screen.send_msg("Player one WIN !");
         } else {
-            println!("coucou");
             _p_screen.send_msg("Player two WIN !");
         }
 
@@ -242,14 +260,11 @@ fn action_end_turn(
 fn action_player_one(
     _p_sender: &Sender<MqMsg>,
     _p_screen: &screen::Screen,
-    _p_grid: &mut game::Grid,
+    _p_game: &mut game::Game,
 ) {
     INFO!("[StateMachine] - Action : Player one is playing");
-    _p_screen.send_msg(
-        "\x1B[32mPlayer one it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
-    );
 
-    if game::player_turn(_p_screen, _p_grid) {
+    if game::player_turn(_p_screen, _p_game) {
         _p_sender
             .send(MqMsg {
                 event: Event::EndTurn,
@@ -257,9 +272,7 @@ fn action_player_one(
             .expect("[StateMachine] Error can not send event endTurn");
     } else {
         _p_sender
-            .send(MqMsg {
-                event: Event::Quit,
-            })
+            .send(MqMsg { event: Event::Quit })
             .expect("[StateMachine] Error can not send event endTurn");
     }
 }
@@ -267,18 +280,21 @@ fn action_player_one(
 fn action_player_two(
     _p_sender: &Sender<MqMsg>,
     _p_screen: &screen::Screen,
-    _p_grid: &mut game::Grid,
+    _p_game: &mut game::Game,
 ) {
     INFO!("[StateMachine] - Action : Player two is playing");
-    _p_screen.send_msg(
-        "\x1B[31mPlayer two it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
-    );
-    game::player_turn(_p_screen, _p_grid);
-    _p_sender
-        .send(MqMsg {
-            event: Event::EndTurn,
-        })
-        .expect("[StateMachine] Error can not send event endTurn");
+
+    if game::player_turn(_p_screen, _p_game) {
+        _p_sender
+            .send(MqMsg {
+                event: Event::EndTurn,
+            })
+            .expect("[StateMachine] Error can not send event endTurn");
+    } else {
+        _p_sender
+            .send(MqMsg { event: Event::Quit })
+            .expect("[StateMachine] Error can not send event endTurn");
+    }
 }
 
 /////////////////////////////////////////// Functions /////////////////////////////////////////////////////////////////
@@ -291,15 +307,32 @@ impl Game<TestPlayerTurn> {
     }
 }
 
+impl Game<Quit> {
+    pub fn quit() -> Self {
+        Game { state: Quit {} }
+    }
+}
+
 impl GameWrapper {
     pub fn new() -> Self {
         GameWrapper::TestPlayerTurn(Game::new())
     }
 
+    pub fn quit() -> Self {
+        GameWrapper::Quit(Game::quit())
+    }
+
+    pub fn is_quit(&self) -> bool {
+        match self {
+            GameWrapper::Quit(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn step(
         &self,
         event: &Event,
-    ) -> Result<(Self, fn(&Sender<MqMsg>, &screen::Screen, &mut game::Grid)), ()> {
+    ) -> Result<(Self, fn(&Sender<MqMsg>, &screen::Screen, &mut game::Game)), ()> {
         match (self, event) {
             (GameWrapper::PlayerOneTurn(_previous_state), Event::EndTurn) => Ok((
                 GameWrapper::TestGameStatus(_previous_state.into()),
@@ -310,7 +343,7 @@ impl GameWrapper {
                 action_end_turn,
             )),
             (GameWrapper::TestGameStatus(_previous_state), Event::EndGame) => {
-                Ok((*self, action_quit))
+                Ok((GameWrapper::quit(), action_quit))
             }
             (GameWrapper::TestGameStatus(_previous_state), Event::NextTurn) => Ok((
                 GameWrapper::TestPlayerTurn(_previous_state.into()),
@@ -324,7 +357,7 @@ impl GameWrapper {
                 GameWrapper::PlayerTwoTurn(_previous_state.into()),
                 action_player_two,
             )),
-            (_, Event::Quit) => Ok((*self, action_quit)),
+            (_, Event::Quit) => Ok((GameWrapper::quit(), action_quit)),
             (_, _) => {
                 WARNING!("[StateMachine] - Transition : From ... to ... >> Unsupported transition");
                 Ok((*self, action_none))
@@ -338,17 +371,17 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
 
     let mut l_current_state: GameWrapper = GameWrapper::new();
     let l_screen = screen::Screen::new_and_start();
-    let mut l_grid: game::Grid = game::create_grid(&l_screen);
+    let mut l_game: game::Game = game::create_game(&l_screen);
 
-    l_screen.send_grid(l_grid.clone());
-    loop {
+    l_screen.send_game(&l_game);
+    while l_current_state.is_quit() != true {
         let l_msg: MqMsg = p_receiver
             .recv()
             .expect("[StateMachine] Error when receiving the message in the channel");
 
         l_current_state = match l_current_state.step(&l_msg.event) {
             Ok((l_new_state, l_callback)) => {
-                l_callback(p_sender, &l_screen, &mut l_grid);
+                l_callback(p_sender, &l_screen, &mut l_game);
                 l_new_state
             }
             Err(_) => {
