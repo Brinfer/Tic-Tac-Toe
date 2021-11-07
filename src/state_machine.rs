@@ -87,7 +87,7 @@ enum Event {
     EndGame,
     PlayerOneTurn,
     PlayerTwoTurn,
-    //Quit,
+    Quit,
 }
 
 #[derive(Copy, Clone)]
@@ -175,7 +175,7 @@ fn action_none(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &
 
 fn action_quit(_p_sender: &Sender<MqMsg>, _p_screen: &screen::Screen, _p_grid: &mut game::Grid) {
     INFO!("[StateMachine] - Action : Quit");
-    _p_screen.send(screen::MqScreen::Quit);
+    _p_screen.send_quit();
 }
 
 fn action_next_turn(
@@ -186,9 +186,7 @@ fn action_next_turn(
     INFO!("[StateMachine] - Action : Next Turn");
     _p_grid.toggle_player();
     _p_screen.send_msg("Next Turn");
-    _p_screen.send(screen::MqScreen::CurrentGrid {
-        grid: _p_grid.clone(),
-    });
+    _p_screen.send_grid(_p_grid.clone());
 
     match _p_grid.current_player() {
         common::Player::PlayerOne => {
@@ -215,21 +213,18 @@ fn action_end_turn(
 ) {
     INFO!("[StateMachine] - Action : End Turn");
     if game::is_over(&_p_grid) {
-        _p_screen.send(screen::MqScreen::CurrentGrid {
-            grid: _p_grid.clone(),
-        });
+        _p_screen.send_grid(_p_grid.clone());
 
         let winner = _p_grid.current_player();
-        if winner == common::Player::PlayerOne{
+        if winner == common::Player::PlayerOne {
             println!("coucou2");
 
-            _p_screen.send(screen::MqScreen::Message{msg: String::from("Player one WIN !")});
-        }
-        else{
+            _p_screen.send_msg("Player one WIN !");
+        } else {
             println!("coucou");
-            _p_screen.send(screen::MqScreen::Message{msg: String::from("Player two WIN !")});
+            _p_screen.send_msg("Player two WIN !");
         }
-        
+
         _p_sender
             .send(MqMsg {
                 event: Event::EndGame,
@@ -253,12 +248,20 @@ fn action_player_one(
     _p_screen.send_msg(
         "\x1B[32mPlayer one it is your turn. Enter the cell you want to fill.\x1B[0m \x1B[41mq to quit the game\x1B[0m",
     );
-    game::player_turn(_p_screen, _p_grid);
-    _p_sender
-        .send(MqMsg {
-            event: Event::EndTurn,
-        })
-        .expect("[StateMachine] Error can not send event endTurn");
+
+    if game::player_turn(_p_screen, _p_grid) {
+        _p_sender
+            .send(MqMsg {
+                event: Event::EndTurn,
+            })
+            .expect("[StateMachine] Error can not send event endTurn");
+    } else {
+        _p_sender
+            .send(MqMsg {
+                event: Event::Quit,
+            })
+            .expect("[StateMachine] Error can not send event endTurn");
+    }
 }
 
 fn action_player_two(
@@ -321,7 +324,7 @@ impl GameWrapper {
                 GameWrapper::PlayerTwoTurn(_previous_state.into()),
                 action_player_two,
             )),
-            //(_, Event::Quit) => Ok((*self, action_quit)),
+            (_, Event::Quit) => Ok((*self, action_quit)),
             (_, _) => {
                 WARNING!("[StateMachine] - Transition : From ... to ... >> Unsupported transition");
                 Ok((*self, action_none))
@@ -337,9 +340,7 @@ fn run(p_sender: &Sender<MqMsg>, p_receiver: &Receiver<MqMsg>) {
     let l_screen = screen::Screen::new_and_start();
     let mut l_grid: game::Grid = game::create_grid(&l_screen);
 
-    l_screen.send(screen::MqScreen::CurrentGrid {
-        grid: l_grid.clone(),
-    });
+    l_screen.send_grid(l_grid.clone());
     loop {
         let l_msg: MqMsg = p_receiver
             .recv()
