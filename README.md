@@ -1,7 +1,7 @@
 # Tic-Tac-Toe
 
 This is a Tic-Tac-Toe game.
-At the beginning you have to enter the size of your grid. If you enter "3", you will have 3 lines and 3 rows.
+At the beginning you have to enter the size of your grid. If you enter `3`, you will have 3 lines and 3 rows.
 
 ## Mode
 
